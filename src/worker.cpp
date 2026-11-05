@@ -22,6 +22,7 @@ void Worker::run(std::stop_token stop) {
     UdpSocket udp, discovery;
     Adapter selected;
     std::map<QString, std::unique_ptr<Capture>> captures;
+    std::map<QString, QString> captureMacs;
     std::map<QString, qint64> blocked;
     QStringList captureErrors;
     QString lastError = store.error;
@@ -52,7 +53,7 @@ void Worker::run(std::stop_token stop) {
         }
         emit logged(s);
     };
-    log("ConsoleLAN 1.2.0 iniciado. " + Capture::version());
+    log("ConsoleLAN 1.2.1 iniciado. " + Capture::version());
     if (!store.error.isEmpty())
         log(store.error);
     auto flush = [&]() {
@@ -213,13 +214,19 @@ void Worker::run(std::stop_token stop) {
                     captureErrors << "VPN y Ethernet no pueden ser la misma interfaz.";
                     continue;
                 }
-                bool up =
-                    std::any_of(all.begin(), all.end(), [&](const Adapter &a) { return a.id == id && a.up; });
-                if (!up) {
+                auto interface = std::find_if(all.begin(), all.end(),
+                                              [&](const Adapter &a) { return a.id == id && a.up; });
+                if (interface == all.end()) {
                     captures.erase(id);
                     captureErrors << "Ethernet ausente o desconectada: " + id;
                     continue;
                 }
+                if (!validMac(interface->mac)) {
+                    captures.erase(id);
+                    captureErrors << "No se pudo identificar la MAC de la Ethernet: " + id;
+                    continue;
+                }
+                captureMacs[id] = interface->mac;
                 if (captures.contains(id))
                     continue;
                 auto cap = std::make_unique<Capture>();
@@ -257,7 +264,7 @@ void Worker::run(std::stop_token stop) {
                 }
                 if (blocked[id] > now)
                     continue;
-                room.captured(id, *b, now);
+                room.captured(id, *b, now, captureMacs.at(id));
             }
             if (now - lastBeacon >= 2000)
                 cap->inject(bridgeBeacon(room.node));

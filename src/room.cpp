@@ -633,7 +633,7 @@ void Room::relay(Id origin, Id seq, const QByteArray &b) {
             if (members_.contains(n))
                 sendBytes(members_.at(n).endpoint, Type::Frame, b, members_.at(n).token, origin, seq);
 }
-void Room::captured(const QString &adapter, const QByteArray &b, qint64 now) {
+void Room::captured(const QString &adapter, const QByteArray &b, qint64 now, const QString &interfaceMac) {
     now_ = now;
     if (!connected())
         return;
@@ -643,6 +643,12 @@ void Room::captured(const QString &adapter, const QByteArray &b, qint64 now) {
     }
     auto f = inspect(b);
     if (!f) {
+        ++filtered;
+        return;
+    }
+    // Windows routing/proxying can emit a console's source IP using this PC's NIC MAC.
+    // Such frames are local PC traffic, never evidence of a console or an IP/MAC conflict.
+    if (!interfaceMac.isEmpty() && f->source == interfaceMac) {
         ++filtered;
         return;
     }
@@ -661,7 +667,8 @@ void Room::captured(const QString &adapter, const QByteArray &b, qint64 now) {
         if (!d.mac.isEmpty() && d.mac != f->source) {
             if (!localConflicts_.contains(d.key)) {
                 localConflicts_[d.key] = "CONFLICTO IP/MAC: revise la consola o use Reaprender MAC";
-                logs << "CONFLICTO: otra MAC emite con la IP " + ipText(it->ip);
+                logs << QString("Conflicto IP/MAC en %1: MAC guardada %2, MAC observada %3 (Ethernet %4).")
+                            .arg(ipText(it->ip), d.mac, f->source, adapter);
             }
             ++filtered;
             return;

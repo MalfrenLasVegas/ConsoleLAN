@@ -317,5 +317,12 @@
   "No se pudo asignar la IP del adaptador propio (Windows %1)": "Could not assign the dedicated adapter IP (Windows %1)",
   "No se pudo crear la ruta local de consola (Windows %1)": "Could not create the local console route (Windows %1)",
   "No se pudo iniciar el adaptador propio (Windows %1)": "Could not start the dedicated adapter (Windows %1)",
-  "No se pudo activar la IP del adaptador propio (Windows %1)": "Could not activate the dedicated adapter IP (Windows %1)"
+  "No se pudo activar la IP del adaptador propio (Windows %1)": "Could not activate the dedicated adapter IP (Windows %1)",
+  "ConsoleLAN 1.2.1 — LAN entre casas": "ConsoleLAN 1.2.1 — LAN across homes",
+  "Manual de ConsoleLAN 1.2.1": "ConsoleLAN 1.2.1 manual",
+  "ConsoleLAN 1.2.1 · diagnóstico\n\nVPN / socket: %1\nNpcap: %2\nEstado: %3\nTráfico Ethernet observado: %4\nInyecciones realizadas: %5\nErrores de envío: %6\nRechazos de protocolo: %7\nFiltradas: %8\nDescartes por cola: %9\n\nUn paquete observado no demuestra conectividad entre consolas.\nLa latencia mide ida y vuelta al maestro, no el ping del juego.\n\n": "ConsoleLAN 1.2.1 · diagnostics\n\nVPN / socket: %1\nNpcap: %2\nStatus: %3\nObserved Ethernet packets: %4\nFrames injected: %5\nSend errors: %6\nProtocol rejections: %7\nFiltered frames: %8\nQueue drops: %9\n\nAn observed packet does not prove connectivity between consoles.\nLatency measures the round trip to the host, not in-game ping.\n\n",
+  "ConsoleLAN 1.2.1 iniciado. %1": "ConsoleLAN 1.2.1 started. %1",
+  "No se pudo identificar la MAC de la Ethernet: %1": "Could not identify the Ethernet adapter MAC: %1",
+  "Conflicto IP/MAC en %1: MAC guardada %2, MAC observada %3 (Ethernet %4).": "IP/MAC conflict at %1: saved MAC %2, observed MAC %3 (Ethernet %4).",
+  "Conflicto de IP: revisa la consola o usa Volver a detectar la consola": "IP conflict: check the console or use Detect this console again"
 }

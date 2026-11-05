@@ -1,4 +1,4 @@
-# ConsoleLAN 1.2.0 manual
+# ConsoleLAN 1.2.1 manual
 
 ## Language and appearance
 

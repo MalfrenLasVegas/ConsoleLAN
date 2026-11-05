@@ -94,6 +94,32 @@ int main(int argc, char **argv) {
         host.captured("ethernet", arp, clockMs());
         check(host.outbound.isEmpty() && host.view()["filtered"].toDouble() > filtered,
               "room capture never sends PC access ARP to VPN");
+        // Regression: Windows routing can retransmit the console's IPv4 packet with the PC NIC MAC.
+        // It is not a second console claiming the reservation.
+        const QString pcMac = "02:00:00:00:00:10";
+        const QString consoleMac = "02:00:00:00:00:20";
+        Room echoes;
+        echoes.host("echo-regression", net, clockMs());
+        echoes.addConsole("PS5", "ethernet");
+        echoes.tick(clockMs() + 2000);
+        auto makeFrame = [&](const QString &source, quint32 destination) {
+            return QByteArray::fromHex("020000000030") + QByteArray::fromHex(source.toLatin1()) +
+                   QByteArray::fromHex("0800") + packet(net | 2, destination);
+        };
+        auto own = makeFrame(pcMac, 0xcb007109);
+        echoes.captured("ethernet", own, clockMs(), pcMac);
+        check(echoes.remembered()[0].mac.isEmpty(),
+              "PC forwarded traffic must not become the console identity");
+        auto real = makeFrame(consoleMac, 0xe00000fb);
+        echoes.captured("ethernet", real, clockMs(), pcMac);
+        check(echoes.remembered()[0].mac == consoleMac, "real console MAC is learned normally");
+        echoes.captured("ethernet", own, clockMs(), pcMac);
+        check(!echoes.view()["consoles"].toArray()[0].toObject()["status"].toString().contains("CONFLICTO"),
+              "PC retransmission must not create an IP MAC conflict");
+        auto duplicate = makeFrame("02:00:00:00:00:99", 0xe00000fb);
+        echoes.captured("ethernet", duplicate, clockMs(), pcMac);
+        check(echoes.view()["consoles"].toArray()[0].toObject()["status"].toString().contains("CONFLICTO"),
+              "a genuinely different console MAC still creates a conflict");
         auto invalid = v;
         invalid["mode"] = "offline";
         check(!accessPlan(invalid), "feature requires active room");

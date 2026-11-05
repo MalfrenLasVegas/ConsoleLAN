@@ -112,7 +112,7 @@ class Room {
     void releaseReservation(const QString &owner, const QString &key);
     void setAdapter(const QString &key, const QString &adapter);
     void forgetMac(const QString &key);
-    void captured(const QString &adapter, const QByteArray &b, qint64 now);
+    void captured(const QString &adapter, const QByteArray &b, qint64 now, const QString &interfaceMac = {});
     QJsonObject view() const;
 };
 } // namespace cl

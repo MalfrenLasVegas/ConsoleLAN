@@ -1,4 +1,4 @@
-ConsoleLAN 1.2.0 para Windows x64
+ConsoleLAN 1.2.1 para Windows x64
 
 Incluye tema claro/oscuro y selector Español/English, con preferencias persistentes y aplicación inmediata sin salir de la sala. Actualizar desde 1.0 conserva sus consolas y reservas.
 

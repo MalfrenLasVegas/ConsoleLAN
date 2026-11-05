@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-project(ConsoleLAN VERSION 1.2.0 LANGUAGES CXX)
+project(ConsoleLAN VERSION 1.2.1 LANGUAGES CXX)
 # CMake can misdecode the UTF-8 /showIncludes prefix with Spanish-only MSVC.
 # Keep Ninja's dependency parser consistent with the compiler's actual bytes.
 if(MSVC AND CMAKE_CXX_CL_SHOWINCLUDES_PREFIX MATCHES "^Nota:")

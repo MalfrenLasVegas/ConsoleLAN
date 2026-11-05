@@ -1,8 +1,12 @@
-# ConsoleLAN 1.2.0
+# ConsoleLAN 1.2.1
 
 [Español](README.md) · English
 
 Windows x64 application in C++20, Qt 6 Widgets, Winsock and Npcap for selectively extending console LAN traffic over an existing VPN. Each room's host coordinates IP reservations and relays UDP traffic. No accounts or central server are required.
+
+## Fixed in 1.2.1
+
+Ignore frames emitted or forwarded by the PC Ethernet adapter before console identity learning. This prevents false IP/MAC conflicts when Windows forwarding is enabled while retaining detection of genuine duplicate console addresses. Reservations and network settings remain unchanged. See the [patch report](docs/INFORME-1.2.1.md).
 
 ## New in 1.2
 
@@ -14,12 +18,12 @@ Windows x64 application in C++20, Qt 6 Widgets, Winsock and Npcap for selectivel
 
 ## Downloads
 
-- [Windows x64 installer](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.2.0/ConsoleLAN-1.2.0-win64-setup.exe)
-- [Portable package with Qt](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.2.0/ConsoleLAN-1.2.0-win64-portable.zip)
-- [Full source and illustrated documentation](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.2.0/ConsoleLAN-1.2.0-source.zip)
-- [SHA256 checksums](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.2.0/SHA256SUMS.txt)
+- [Windows x64 installer](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.2.1/ConsoleLAN-1.2.1-win64-setup.exe)
+- [Portable package with Qt](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.2.1/ConsoleLAN-1.2.1-win64-portable.zip)
+- [Full source and illustrated documentation](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.2.1/ConsoleLAN-1.2.1-source.zip)
+- [SHA256 checksums](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.2.1/SHA256SUMS.txt)
 
-Read the [1.2.0 release notes](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/tag/v1.2.0). [Npcap](https://npcap.com/#download) must be installed separately. The portable package requires an up-to-date Microsoft Visual C++ Runtime x64. Qt Base sources and license notices are included in the binary packages.
+Read the [1.2.1 release notes](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/tag/v1.2.1). [Npcap](https://npcap.com/#download) must be installed separately. The portable package requires an up-to-date Microsoft Visual C++ Runtime x64. Qt Base sources and license notices are included in the binary packages.
 
 ## Interface
 
@@ -27,7 +31,7 @@ Read the [1.2.0 release notes](https://github.com/MalfrenLasVegas/ConsoleLAN/rel
 
 ![ConsoleLAN 1.2 in Light theme and English](docs/images/consolelan-1.2-light-en.png)
 
-Real UI rendered with synthetic data. These screenshots do not prove console gameplay. The native integration test uses signed Wintun and real Windows TCP against a simulated FTP console; physical PS5 FTP and console gameplay still require hardware acceptance. See the [manual](docs/MANUAL.en.md) and [implementation/validation report](docs/INFORME-1.2.0.md).
+Real UI rendered with synthetic data. These screenshots do not prove console gameplay. The native integration test uses signed Wintun and real Windows TCP against a simulated FTP console; physical PS5 FTP and console gameplay still require hardware acceptance. See the [manual](docs/MANUAL.en.md) and [implementation/validation report](docs/INFORME-1.2.1.md).
 
 ## Getting started
 
