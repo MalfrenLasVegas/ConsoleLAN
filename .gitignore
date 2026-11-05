@@ -1,0 +1,5 @@
+/build/
+/build-x64/
+/dist/
+/deps/
+*.user

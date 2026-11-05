@@ -1,0 +1,11 @@
+ConsoleLAN 1.0 para Windows x64
+
+Necesita una VPN ya configurada con UDP entre los PC, Ethernet por cable y Npcap instalado por separado desde https://npcap.com/#download.
+
+Este instalador NO incluye Npcap. Su licencia gratuita limita el uso y prohíbe la redistribución externa. Revise las condiciones aplicables en la web oficial.
+
+La tarea de firewall es opcional y está desmarcada. Si la selecciona, indique la IPv4 VPN LOCAL de este PC. Solo se autorizan este ejecutable, la interfaz que tiene esa IP y UDP 32189-32190. No se cambia ninguna ruta, NAT, puente ni configuración IP doméstica.
+
+Microsoft Visual C++ Runtime x64 se instala si no está presente. ConsoleLAN no da acceso a Internet, PSN ni DNS a las consolas. El funcionamiento de una partida requiere validar el hardware y el modo LAN del juego siguiendo docs/ACEPTACION.md.
+
+Los datos del usuario se conservan al desinstalar. La aplicación no tiene firma de editor; Windows puede mostrar una advertencia de reputación.
