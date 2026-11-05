@@ -42,11 +42,12 @@ struct Api {
         LOAD(create, pcap_create)
         LOAD(activate, pcap_activate)
         LOAD(snaplen, pcap_set_snaplen)
-        LOAD(promisc, pcap_set_promisc) LOAD(timeout, pcap_set_timeout)
-            LOAD(immediate, pcap_set_immediate_mode) LOAD(nonblock, pcap_setnonblock) LOAD(next, pcap_next_ex)
-                LOAD(send, pcap_sendpacket) LOAD(close, pcap_close) LOAD(datalink, pcap_datalink)
-                    LOAD(compile, pcap_compile) LOAD(filter, pcap_setfilter) LOAD(freecode, pcap_freecode)
-                        LOAD(geterr, pcap_geterr) LOAD(version, pcap_lib_version)
+        LOAD(promisc, pcap_set_promisc)
+        LOAD(timeout, pcap_set_timeout)
+        LOAD(immediate, pcap_set_immediate_mode) LOAD(nonblock, pcap_setnonblock) LOAD(next, pcap_next_ex)
+            LOAD(send, pcap_sendpacket) LOAD(close, pcap_close) LOAD(datalink, pcap_datalink)
+                LOAD(compile, pcap_compile) LOAD(filter, pcap_setfilter) LOAD(freecode, pcap_freecode)
+                    LOAD(geterr, pcap_geterr) LOAD(version, pcap_lib_version)
 #undef LOAD
     }
     ~Api() {

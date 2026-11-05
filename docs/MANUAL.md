@@ -1,4 +1,14 @@
-# Manual de ConsoleLAN 1.0
+# Manual de ConsoleLAN 1.1
+
+[English manual](MANUAL.en.md)
+
+## Idioma y tema
+
+En la esquina superior derecha puede elegir **Idioma: Español / English** y **Tema: Claro / Oscuro**. Se aplican al momento, sin reiniciar ni abandonar la sala. El idioma actualiza etiquetas, estados, diagnóstico, registros visibles y el manual. No se traducen los nombres que haya escrito, las direcciones IP ni los nombres de adaptadores proporcionados por Windows.
+
+Ambas preferencias se guardan inmediatamente para su usuario y se restauran al abrir. La primera vez se usa español si Windows está en español e inglés en los demás casos, con tema claro inicial. Actualizar desde 1.0 conserva consolas, reservas y las preferencias existentes.
+
+El tema oscuro incluye tablas, campos, selección, controles deshabilitados, registros y diálogos Qt; la barra de título también se adapta en Windows compatible. Los detalles de errores nativos mantienen el idioma del controlador o de Windows. El archivo de registro conserva los mensajes originales; el visor y los mensajes legibles exportados siguen el idioma seleccionado.
 
 ## Preparar cada sede
 
@@ -26,7 +36,7 @@ Pulse **Añadir consola**, escriba un nombre y seleccione la fila. Puede recorda
 
 En la consola elija Ethernet, configuración manual y la IP/máscara mostradas. Deje gateway y DNS sin configurar o en `0.0.0.0` si su sistema lo admite. ConsoleLAN no proporciona DNS ni salida a Internet. No hay un servidor oculto en `.1` y no se debe copiar el DNS doméstico esperando que funcione a través del túnel.
 
-Algunas consolas obligan a escribir valores de gateway/DNS antes de guardar. Cuando admitan una configuración LAN sin servicios, puede usar la IP propia de la consola como gateway y DNS **solo como marcador de configuración**, sabiendo que no hay servicio en esas direcciones y que la prueba de Internet fallará. Eso no aporta Internet, DNS ni garantía de que el firmware conserve la configuración. Si la consola no permite continuar hacia el modo LAN sin validar esos servicios, esa combinación de firmware/juego requiere una solución de red adicional fuera de ConsoleLAN 1.0; no se muestra como compatible sin probarla.
+Algunas consolas obligan a escribir valores de gateway/DNS antes de guardar. Cuando admitan una configuración LAN sin servicios, puede usar la IP propia de la consola como gateway y DNS **solo como marcador de configuración**, sabiendo que no hay servicio en esas direcciones y que la prueba de Internet fallará. Eso no aporta Internet, DNS ni garantía de que el firmware conserve la configuración. Si la consola no permite continuar hacia el modo LAN sin validar esos servicios, esa combinación de firmware/juego requiere una solución de red adicional fuera de ConsoleLAN 1.1; no se muestra como compatible sin probarla.
 
 La prueba de Internet puede fallar con la LAN por cable disponible. Entre en el modo LAN/System Link del juego; no en sus modos PSN/online. Los requisitos de cada juego (versiones, contenidos, límites de latencia y modo LAN) se validan por separado.
 

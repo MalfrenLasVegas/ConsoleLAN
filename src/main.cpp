@@ -4,7 +4,7 @@ int main(int argc, char **argv) {
     QApplication app(argc, argv);
     app.setApplicationName("ConsoleLAN");
     app.setOrganizationName("ConsoleLAN");
-    app.setApplicationVersion("1.0.0");
+    app.setApplicationVersion(CONSOLELAN_VERSION);
     QString data = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
     QDir().mkpath(data);
     auto args = app.arguments();
@@ -27,11 +27,21 @@ int main(int argc, char **argv) {
     if (args.contains("--smoke-test")) {
         app.setOrganizationName("ConsoleLAN-smoke");
         data = QDir::tempPath() + "/ConsoleLAN-smoke-" + cl::hex(cl::randomId());
+        // Isolated settings for visual checks, never the user's normal preferences.
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, data);
+        for (auto option : {QString("language"), QString("theme")}) {
+            int i = args.indexOf("--" + option);
+            if (i >= 0 && i + 1 < args.size())
+                QSettings().setValue("appearance/" + option, args[i + 1]);
+        }
     }
+    cl::presentation().loadPreferences();
     QDir().mkpath(data);
     QLockFile instance(data + "/instance.lock");
     if (!instance.tryLock(0)) {
-        QMessageBox::information(nullptr, "ConsoleLAN", "ConsoleLAN ya está abierto para este usuario.");
+        QMessageBox::information(nullptr, "ConsoleLAN",
+                                 cl::text("ConsoleLAN ya está abierto para este usuario."));
         return 1;
     }
     cl::Window window(data);

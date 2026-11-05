@@ -1,6 +1,6 @@
 # Ilustraciones de ConsoleLAN
 
-Estas dos láminas fueron aportadas para ilustrar el objetivo y la disposición de la red. Se incluyen sin modificar los originales. No son capturas de la interfaz de ConsoleLAN 1.0 ni resultados de pruebas de compatibilidad.
+Estas dos láminas fueron aportadas para ilustrar el objetivo y la disposición de la red. Se incluyen sin modificar los originales. No son capturas de la interfaz de ConsoleLAN 1.1 ni resultados de pruebas de compatibilidad.
 
 ## Vista general
 
@@ -12,12 +12,12 @@ Estas dos láminas fueron aportadas para ilustrar el objetivo y la disposición 
 
 ## Cómo interpretar las imágenes
 
-| Elemento de la lámina | Comportamiento real de ConsoleLAN 1.0 |
+| Elemento de la lámina | Comportamiento real de ConsoleLAN 1.1 |
 | --- | --- |
 | Consolas conectadas a una VPN | La VPN está en los PC Windows. Las consolas usan Ethernet con su switch local; el PC captura e inyecta mediante Npcap. |
 | PS4, PS5, Xbox, Switch y cualquier juego LAN | Son ejemplos de equipos. No se ha certificado compatibilidad con esas consolas ni con todos sus juegos; se requiere modo LAN adecuado y aceptación real. |
 | Gateway y DNS `10.50.0.254` | Son valores del dibujo, no servicios implementados. ConsoleLAN no ofrece gateway, DNS ni Internet. Siga la configuración del manual y la IP reservada que muestre la aplicación. |
-| Una interfaz oscura con menús laterales | Es una representación conceptual. La versión 1.0 usa Qt Widgets con pestañas para sala/consolas, diagnóstico y reservas del maestro. |
+| Una interfaz oscura con menús laterales | Es una representación conceptual. La versión 1.1 ofrece temas claro/oscuro y usa Qt Widgets con pestañas para sala/consolas, diagnóstico y reservas del maestro. |
 | Maestro sobre varias salas | Cada sala tiene su propio anfitrión y relay. No hay un maestro global ni un servidor central. Un PC está en una sala a la vez. |
 | IP asignada automáticamente | El maestro reserva automáticamente una IP única. La dirección y máscara se configuran manualmente en la consola. |
 | Todo el tráfico LAN viaja por la VPN | Se transporta selectivamente ARP e IPv4 de consolas registradas. DHCP, IPv6 y otros EtherTypes quedan excluidos; el unicast local conocido permanece en el switch. |

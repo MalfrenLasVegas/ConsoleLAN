@@ -24,8 +24,8 @@ static QTableWidget *table(QStringList headings) {
     t->setAlternatingRowColors(true);
     return t;
 }
-Window::Window(QString dataDir) : dataDir_(std::move(dataDir)) {
-    setWindowTitle("ConsoleLAN 1.0 — LAN entre casas");
+Window::Window(QString dataDir, bool startWorker) : dataDir_(std::move(dataDir)) {
+    setWindowTitle("ConsoleLAN 1.1 — LAN entre casas");
     resize(1180, 880);
     setMinimumSize(960, 720);
     auto central = new QWidget;
@@ -34,13 +34,28 @@ Window::Window(QString dataDir) : dataDir_(std::move(dataDir)) {
     root->setSpacing(10);
     setCentralWidget(central);
     auto top = new QHBoxLayout;
-    auto title = new QLabel("ConsoleLAN <span style='color:#718299;font-size:17px'>1.0</span>");
-    title->setStyleSheet("font-size:28px;font-weight:700;");
+    auto title = new QLabel("ConsoleLAN <span style='color:#718299;font-size:17px'>1.1</span>");
+    title->setProperty("role", "heading");
     top->addWidget(title);
     top->addStretch();
     auto badge = new QLabel("ETHERNET  →  VPN  →  ETHERNET");
-    badge->setStyleSheet("color:#52667d;font-weight:600");
+    badge->setProperty("role", "muted");
     top->addWidget(badge);
+    top->addSpacing(14);
+    top->addWidget(new QLabel("Tema"));
+    theme_ = new QComboBox;
+    theme_->setObjectName("themeSelector");
+    theme_->addItem("Claro", "light");
+    theme_->addItem("Oscuro", "dark");
+    theme_->setCurrentIndex(theme_->findData(presentation().theme()));
+    top->addWidget(theme_);
+    top->addWidget(new QLabel("Idioma"));
+    language_ = new QComboBox;
+    language_->setObjectName("languageSelector");
+    language_->addItem("Español", "es");
+    language_->addItem("English", "en");
+    language_->setCurrentIndex(language_->findData(presentation().language()));
+    top->addWidget(language_);
     root->addLayout(top);
     auto subtitle =
         new QLabel("Conecta consolas en una sala LAN a través de tu VPN. Un PC puente por cada red física.");
@@ -48,7 +63,7 @@ Window::Window(QString dataDir) : dataDir_(std::move(dataDir)) {
     root->addWidget(subtitle);
     status_ = new QLabel("Sin sala");
     status_->setWordWrap(true);
-    status_->setStyleSheet("background:#e9f1ff;color:#183c69;border-radius:7px;padding:10px;font-weight:600");
+    status_->setProperty("role", "status");
     root->addWidget(status_);
     auto tabs = new QTabWidget;
     root->addWidget(tabs, 1);
@@ -119,14 +134,14 @@ Window::Window(QString dataDir) : dataDir_(std::move(dataDir)) {
     ipInfo_ = new QLabel("Seleccione una consola para ver su configuración IP.");
     ipInfo_->setTextInteractionFlags(Qt::TextSelectableByMouse);
     ipInfo_->setWordWrap(true);
-    ipInfo_->setStyleSheet("padding:9px;background:#f1f5fa;border-radius:5px");
+    ipInfo_->setProperty("role", "surface");
     c->addWidget(ipInfo_);
     layout->addWidget(consolesBox, 1);
     auto note = new QLabel(
         "La prueba de Internet puede fallar: esta aplicación ofrece LAN, sin Internet ni DNS. Las consolas "
         "del mismo switch se ven directamente, incluso si sus PC están en salas distintas.");
     note->setWordWrap(true);
-    note->setStyleSheet("color:#52667d");
+    note->setProperty("role", "muted");
     layout->addWidget(note);
     auto diagPage = new QWidget;
     auto d = new QVBoxLayout(diagPage);
@@ -159,34 +174,21 @@ Window::Window(QString dataDir) : dataDir_(std::move(dataDir)) {
     root->addWidget(counters_);
     errors_ = new QLabel;
     errors_->setWordWrap(true);
-    errors_->setStyleSheet("color:#a03827");
+    errors_->setProperty("role", "error");
     root->addWidget(errors_);
-    setStyleSheet(
-        "QMainWindow,QWidget{font-family:'Segoe UI';font-size:12px;color:#20334b} "
-        "QMainWindow{background:#f6f8fb} QGroupBox{font-weight:600;border:1px solid "
-        "#d8e1ec;border-radius:7px;margin-top:10px;padding-top:12px;background:white} "
-        "QGroupBox::title{subcontrol-origin:margin;left:12px;padding:0 5px} "
-        "QPushButton{background:#edf2f8;border:1px solid #ccd7e5;border-radius:5px;padding:6px 10px} "
-        "QPushButton:hover{background:#dce8fa} QPushButton:disabled{color:#9aa5b4} "
-        "QLineEdit,QComboBox,QSpinBox{background:white;border:1px solid "
-        "#c8d3e0;border-radius:4px;padding:6px} "
-        "QTableWidget{background:white;alternate-background-color:#f5f8fc;border:1px solid "
-        "#dbe3ed;gridline-color:#eef2f7} "
-        "QHeaderView::section{background:#eef3f9;border:0;padding:6px;font-weight:600} "
-        "QPlainTextEdit{background:#f9fbfd;border:1px solid #d6e0ed;font-family:Consolas;font-size:12px} "
-        "QTabWidget::pane{border:1px solid #d9e2ed;background:white} QTabBar::tab{padding:8px 16px} "
-        "QTabBar::tab:selected{color:#155ec0;background:white}");
-    host_->setStyleSheet("background:#2166ce;color:white;border:0;padding:7px 14px;font-weight:600");
+    host_->setProperty("role", "primary");
     QSettings settings;
-    roomName_->setText(settings.value("roomName", "Mi sala LAN").toString());
+    roomName_->setText(settings.value("roomName", text("Mi sala LAN")).toString());
     subnet_->setText(settings.value("subnet", "10.253.42.0").toString());
     direct_->setText(settings.value("direct").toString());
     budget_->setValue(settings.value("budget", 1100).toInt());
     refreshAdapters();
-    worker_ = std::make_unique<Worker>(dataDir_);
-    connect(worker_.get(), &Worker::updated, this, &Window::updateView);
-    connect(worker_.get(), &Worker::logged, logs_, &QPlainTextEdit::appendPlainText);
-    connect(refresh, &QPushButton::clicked, this, &Window::refreshAdapters);
+    if (startWorker) {
+        worker_ = std::make_unique<Worker>(dataDir_);
+        connect(worker_.get(), &Worker::updated, this, &Window::updateView);
+        connect(worker_.get(), &Worker::logged, this, &Window::appendLog);
+    }
+    connect(refresh, &QPushButton::clicked, this, [this] { refreshAdapters(); });
     connect(host_, &QPushButton::clicked, this, [this] {
         auto c = command("host");
         c["name"] = roomName_->text();
@@ -206,8 +208,8 @@ Window::Window(QString dataDir) : dataDir_(std::move(dataDir)) {
     });
     connect(add, &QPushButton::clicked, this, [this] {
         bool ok;
-        auto name = QInputDialog::getText(this, "Añadir consola", "Nombre de la consola:", QLineEdit::Normal,
-                                          {}, &ok);
+        auto name = QInputDialog::getText(this, text("Añadir consola"), text("Nombre de la consola:"),
+                                          QLineEdit::Normal, {}, &ok);
         if (ok && !name.trimmed().isEmpty()) {
             auto c = command("add");
             c["name"] = name;
@@ -244,16 +246,19 @@ Window::Window(QString dataDir) : dataDir_(std::move(dataDir)) {
     connect(openData, &QPushButton::clicked, this,
             [this] { QDesktopServices::openUrl(QUrl::fromLocalFile(dataDir_)); });
     connect(manual, &QPushButton::clicked, this, [this] {
-        QString p = QCoreApplication::applicationDirPath() + "/docs/MANUAL.md";
+        QString p = QCoreApplication::applicationDirPath() +
+                    (presentation().language() == "en" ? "/docs/MANUAL.en.md" : "/docs/MANUAL.md");
         if (!QFile::exists(p))
-            p = QCoreApplication::applicationDirPath() + "/../docs/MANUAL.md";
+            p = QCoreApplication::applicationDirPath() +
+                (presentation().language() == "en" ? "/../docs/MANUAL.en.md" : "/../docs/MANUAL.md");
         QFile file(p);
         if (!file.open(QIODevice::ReadOnly)) {
-            QMessageBox::warning(this, "Manual", "No se pudo abrir el manual: " + file.errorString());
+            QMessageBox::warning(this, text("Manual"),
+                                 text("No se pudo abrir el manual: %1").arg(file.errorString()));
             return;
         }
         QDialog dialog(this);
-        dialog.setWindowTitle("Manual de ConsoleLAN 1.0");
+        dialog.setWindowTitle(text("Manual de ConsoleLAN 1.1"));
         dialog.resize(820, 700);
         auto layout = new QVBoxLayout(&dialog);
         auto browser = new QTextBrowser;
@@ -272,18 +277,74 @@ Window::Window(QString dataDir) : dataDir_(std::move(dataDir)) {
             return;
         auto item = reservations_->item(rows.first().row(), 0);
         if (item->data(Qt::UserRole + 2).toBool()) {
-            QMessageBox::information(this, "Reserva activa", "Elimine la consola desde su PC propietario.");
+            QMessageBox::information(this, text("Reserva activa"),
+                                     text("Elimine la consola desde su PC propietario."));
             return;
         }
-        if (QMessageBox::question(this, "Liberar reserva",
-                                  "La IP dejará de estar reservada. Si esa consola vuelve, podría necesitar "
-                                  "reconfiguración. ¿Liberar?") != QMessageBox::Yes)
+        if (QMessageBox::question(
+                this, text("Liberar reserva"),
+                text("La IP dejará de estar reservada. Si esa consola vuelve, podría necesitar "
+                     "reconfiguración. ¿Liberar?")) != QMessageBox::Yes)
             return;
         auto c = command("release");
         c["key"] = item->data(Qt::UserRole).toString();
         c["owner"] = item->data(Qt::UserRole + 1).toString();
         post(c);
     });
+
+    vpn_->setObjectName("vpnSelector");
+    ethernet_->setObjectName("ethernetSelector");
+    roomName_->setObjectName("roomName");
+    direct_->setObjectName("hostAddress");
+    host_->setObjectName("createRoom");
+    consoles_->setObjectName("consolesTable");
+    reservations_->setObjectName("reservationsTable");
+    status_->setObjectName("connectionStatus");
+    diagnostics_->setObjectName("diagnostics");
+    logs_->setObjectName("logs");
+    for (auto label : {status_, roomInfo_, counters_, ipInfo_, errors_})
+        label->setProperty("dynamicText", true);
+    rememberUiText(this);
+    uiReady_ = true;
+    view_ = {{"mode", "offline"}, {"status", "Sin sala"}, {"rtt", -1}};
+    retranslate();
+    connect(language_, &QComboBox::currentIndexChanged, this,
+            [this] { presentation().setLanguage(language_->currentData().toString()); });
+    connect(theme_, &QComboBox::currentIndexChanged, this, [this] {
+        presentation().setTheme(theme_->currentData().toString());
+        updateView(view_);
+    });
+}
+void Window::changeEvent(QEvent *event) {
+    QMainWindow::changeEvent(event);
+    if (event->type() == QEvent::LanguageChange && uiReady_)
+        retranslate();
+}
+void Window::retranslate() {
+    if (!uiReady_)
+        return;
+    setWindowTitle(text("ConsoleLAN 1.1 — LAN entre casas"));
+    translateUiText(this);
+    {
+        QSignalBlocker block(theme_);
+        theme_->setItemText(0, text("Claro"));
+        theme_->setItemText(1, text("Oscuro"));
+    }
+    budget_->setSuffix(text(" bytes UDP"));
+    refreshAdapters(false);
+    retranslating_ = true;
+    updateView(view_);
+    retranslating_ = false;
+    QStringList translated;
+    for (const auto &line : rawLogs_)
+        translated << message(line);
+    logs_->setPlainText(translated.join('\n'));
+}
+void Window::appendLog(QString line) {
+    rawLogs_.append(line);
+    if (rawLogs_.size() > 1000)
+        rawLogs_.removeFirst();
+    logs_->appendPlainText(message(line));
 }
 Window::~Window() {
     QSettings s;
@@ -295,7 +356,7 @@ Window::~Window() {
     s.setValue("budget", budget_->value());
     worker_.reset();
 }
-void Window::refreshAdapters() {
+void Window::refreshAdapters(bool enumerate) {
     QSettings s;
     auto oldVpn = vpn_->currentData().toString();
     if (oldVpn.isEmpty())
@@ -303,14 +364,15 @@ void Window::refreshAdapters() {
     auto oldEth = ethernet_->currentData().toString();
     if (oldEth.isEmpty())
         oldEth = s.value("ethernet").toString();
-    adapters_ = adapters();
+    if (enumerate)
+        adapters_ = adapters();
     vpn_->clear();
     ethernet_->clear();
-    ethernet_->addItem("Automática · aprender por IP de origen", QString());
+    ethernet_->addItem(text("Automática · aprender por IP de origen"), QString());
     int recommended = -1;
     for (auto &a : adapters_) {
-        auto label =
-            a.name + " · " + (a.ip ? ipText(a.ip) : "sin IPv4") + " · " + (a.up ? "activa" : "desconectada");
+        auto label = a.name + " · " + (a.ip ? ipText(a.ip) : text("sin IPv4")) + " · " +
+                     text(a.up ? "activa" : "desconectada");
         vpn_->addItem(label, a.id + "|" + ipText(a.ip));
         auto description = (a.name + " " + a.description).toLower();
         bool vpnHint = description.contains("zerotier") || description.contains("wireguard") ||
@@ -332,17 +394,19 @@ QJsonObject Window::command(QString op) const {
     return {{"op", op}, {"vpn", parts.value(0)}, {"vpnIp", parts.value(1)}, {"budget", budget_->value()}};
 }
 void Window::post(QJsonObject c) {
-    worker_->post(std::move(c));
+    if (worker_)
+        worker_->post(std::move(c));
 }
 void Window::joinDirect() {
-    auto text = direct_->text().trimmed();
-    auto parts = text.split(':');
+    auto hostText = direct_->text().trimmed();
+    auto parts = hostText.split(':');
     auto ip = parseIp(parts.value(0));
     bool ok = true;
     int port = parts.size() == 2 ? parts[1].toInt(&ok) : 32190;
     if (!ip || !ok || port < 1 || port > 65535 || parts.size() > 2) {
-        QMessageBox::information(this, "Conexión directa",
-                                 "Introduzca la IPv4 VPN del anfitrión, opcionalmente seguida de :puerto.");
+        QMessageBox::information(
+            this, text("Conexión directa"),
+            text("Introduzca la IPv4 VPN del anfitrión, opcionalmente seguida de :puerto."));
         return;
     }
     auto c = command("join");
@@ -363,18 +427,20 @@ QString Window::configuration() const {
     for (auto v : view_["consoles"].toArray()) {
         auto c = consoleFromJson(v.toObject());
         if (c.key == selectedConsole_ && c.owner == selectedOwner_)
-            return QString("%1\nIP: %2    Máscara: 255.255.255.0\nGateway: vacío / 0.0.0.0    DNS: sin "
-                           "configurar (no se proporciona servicio DNS)\nConfigure la red por cable "
-                           "manualmente. Si la consola exige gateway/DNS, consulte el manual; la prueba de "
-                           "Internet no certifica el modo LAN.")
+            return text("%1\nIP: %2    Máscara: 255.255.255.0\nGateway: vacío / 0.0.0.0    DNS: sin "
+                        "configurar (no se proporciona servicio DNS)\nConfigure la red por cable "
+                        "manualmente. Si la consola exige gateway/DNS, consulte el manual; la prueba de "
+                        "Internet no certifica el modo LAN.")
                 .arg(c.name, ipText(c.ip));
     }
-    return "Seleccione una consola con reserva de sala. Las consolas recordadas reciben IP al crear o entrar "
-           "en una sala.";
+    return text(
+        "Seleccione una consola con reserva de sala. Las consolas recordadas reciben IP al crear o entrar "
+        "en una sala.");
 }
 void Window::updateView(QJsonObject nextView) {
-    auto previousOffers = view_["offers"];
-    auto previousReservations = view_["reservations"];
+    // Own these values before replacing view_: QJsonValueRef would point at the old object.
+    const QJsonValue previousOffers = view_.value("offers");
+    const QJsonValue previousReservations = view_.value("reservations");
     view_ = std::move(nextView);
     QString mode = view_["mode"].toString();
     bool active = mode != "offline";
@@ -384,18 +450,19 @@ void Window::updateView(QJsonObject nextView) {
     leave_->setEnabled(active);
     roomName_->setEnabled(!active);
     subnet_->setEnabled(!active);
-    status_->setText(view_["status"].toString());
-    errors_->setText(view_["error"].toString().isEmpty() ? QString()
-                                                         : "Último error: " + view_["error"].toString());
+    status_->setText(message(view_["status"].toString()));
+    errors_->setText(view_["error"].toString().isEmpty()
+                         ? QString()
+                         : text("Último error: %1").arg(message(view_["error"].toString())));
     QStringList people;
     for (auto v : view_["members"].toArray())
         people << v.toObject()["name"].toString();
-    roomInfo_->setText(QString("Sala: %1   ·   Maestro: %2\nParticipantes (%3): %4")
+    roomInfo_->setText(text("Sala: %1   ·   Maestro: %2\nParticipantes (%3): %4")
                            .arg(view_["name"].toString().isEmpty() ? "—" : view_["name"].toString(),
-                                active ? view_["master"].toString() : "—")
+                                active ? message(view_["master"].toString()) : "—")
                            .arg(people.size())
                            .arg(people.join(", ")));
-    if (previousOffers != view_["offers"]) {
+    if (previousOffers != view_["offers"] || retranslating_) {
         offers_->setRowCount(0);
         for (auto v : view_["offers"].toArray()) {
             auto o = v.toObject();
@@ -406,7 +473,7 @@ void Window::updateView(QJsonObject nextView) {
             cell(offers_, row, 2, QString::number(o["members"].toInt()));
         }
     }
-    if (previousReservations != view_["reservations"]) {
+    if (previousReservations != view_["reservations"] || retranslating_) {
         reservations_->setRowCount(0);
         for (auto value : view_["reservations"].toArray()) {
             auto o = value.toObject();
@@ -418,7 +485,7 @@ void Window::updateView(QJsonObject nextView) {
             cell(reservations_, row, 1, o["ip"].toString());
             cell(reservations_, row, 2, o["mac"].toString());
             cell(reservations_, row, 3, o["owner"].toString());
-            cell(reservations_, row, 4, o["active"].toBool() ? "Sede activa" : "Sede desconectada");
+            cell(reservations_, row, 4, text(o["active"].toBool() ? "Sede activa" : "Sede desconectada"));
         }
     }
     QSignalBlocker block(consoles_);
@@ -445,41 +512,41 @@ void Window::updateView(QJsonObject nextView) {
         consoles_->insertRow(row);
         cell(consoles_, row, 0, c.name, c.key);
         consoles_->item(row, 0)->setData(Qt::UserRole + 1, c.owner);
-        cell(consoles_, row, 1, local ? "Este PC" : "Remota");
-        cell(consoles_, row, 2, c.ip ? ipText(c.ip) : "Pendiente");
-        cell(consoles_, row, 3, c.mac.isEmpty() ? "Esperando" : c.mac);
+        cell(consoles_, row, 1, text(local ? "Este PC" : "Remota"));
+        cell(consoles_, row, 2, c.ip ? ipText(c.ip) : text("Pendiente"));
+        cell(consoles_, row, 3, c.mac.isEmpty() ? text("Esperando") : c.mac);
         QString adapter = c.adapter;
         for (auto &a : adapters_)
             if (a.id == c.adapter) {
                 adapter = a.name;
                 break;
             }
-        cell(consoles_, row, 4, adapter.isEmpty() ? "Automática" : adapter);
-        cell(consoles_, row, 5, c.status);
+        cell(consoles_, row, 4, adapter.isEmpty() ? text("Automática") : adapter);
+        cell(consoles_, row, 5, message(c.status));
         if (c.status.contains("CONFLICTO"))
             for (int j = 0; j < 6; ++j)
-                consoles_->item(row, j)->setForeground(QColor("#b13a25"));
+                consoles_->item(row, j)->setForeground(presentation().conflictColor());
         if (c.key == selectedConsole_ && c.owner == selectedOwner_)
             consoles_->selectRow(row);
     }
     ipInfo_->setText(configuration());
     int rtt = view_["rtt"].toInt(-1);
     counters_->setText(
-        QString(
-            "TX %1   ·   RX %2   ·   Incompletas %3   ·   Saltos estimados %4   ·   Latencia al maestro: %5")
+        text("TX %1   ·   RX %2   ·   Incompletas %3   ·   Saltos estimados %4   ·   Latencia al maestro: %5")
             .arg(view_["tx"].toDouble(), 0, 'f', 0)
             .arg(view_["rx"].toDouble(), 0, 'f', 0)
             .arg(view_["incomplete"].toDouble(), 0, 'f', 0)
             .arg(view_["gaps"].toDouble(), 0, 'f', 0)
-            .arg(mode == "host" ? "este PC"
+            .arg(mode == "host" ? text("este PC")
                  : rtt < 0      ? "—"
                                 : QString::number(rtt) + " ms"));
     QString diag =
-        QString("ConsoleLAN 1.0 · diagnóstico\n\nVPN / socket: %1\nNpcap: %2\nEstado: %3\nTráfico Ethernet "
-                "observado: %4\nInyecciones realizadas: %5\nErrores de envío: %6\nRechazos de protocolo: "
-                "%7\nFiltradas: %8\nDescartes por cola: %9\n\nUn paquete observado no demuestra conectividad "
-                "entre consolas.\nLa latencia mide ida y vuelta al maestro, no el ping del juego.\n\n")
-            .arg(view_["bound"].toString(), view_["npcap"].toString(), view_["status"].toString())
+        text("ConsoleLAN 1.1 · diagnóstico\n\nVPN / socket: %1\nNpcap: %2\nEstado: %3\nTráfico Ethernet "
+             "observado: %4\nInyecciones realizadas: %5\nErrores de envío: %6\nRechazos de protocolo: "
+             "%7\nFiltradas: %8\nDescartes por cola: %9\n\nUn paquete observado no demuestra conectividad "
+             "entre consolas.\nLa latencia mide ida y vuelta al maestro, no el ping del juego.\n\n")
+            .arg(message(view_["bound"].toString()), message(view_["npcap"].toString()),
+                 message(view_["status"].toString()))
             .arg(view_["observed"].toDouble(), 0, 'f', 0)
             .arg(view_["injected"].toDouble(), 0, 'f', 0)
             .arg(view_["sendErrors"].toDouble(), 0, 'f', 0)
@@ -489,31 +556,37 @@ void Window::updateView(QJsonObject nextView) {
     for (auto v : view_["captures"].toArray()) {
         auto o = v.toObject();
         diag += "Ethernet " + o["adapter"].toString() + ": " +
-                (o["blocked"].toBool() ? "BLOQUEADA: PC duplicado" : "captura abierta") + "\n";
+                text(o["blocked"].toBool() ? "BLOQUEADA: PC duplicado" : "captura abierta") + "\n";
     }
     for (auto v : view_["captureErrors"].toArray())
-        diag += "ERROR Ethernet: " + v.toString() + "\n";
-    diag += "\nDatos: " + dataDir_;
-    diagnostics_->setPlainText(diag);
+        diag += text("ERROR Ethernet: %1\n").arg(message(v.toString()));
+    diag += text("\nDatos: %1").arg(dataDir_);
+    if (diagnostics_->toPlainText() != diag) {
+        const auto scroll = diagnostics_->verticalScrollBar()->value();
+        diagnostics_->setPlainText(diag);
+        diagnostics_->verticalScrollBar()->setValue(scroll);
+    }
 }
 void Window::exportDiagnostic() {
     auto path = QFileDialog::getSaveFileName(
-        this, "Exportar diagnóstico", QDir::homePath() + "/ConsoleLAN-diagnostico.txt", "Texto (*.txt)");
+        this, text("Exportar diagnóstico"), QDir::homePath() + "/ConsoleLAN-diagnostic.txt",
+        text("Texto (*.txt)"), nullptr, QFileDialog::DontUseNativeDialog);
     if (path.isEmpty())
         return;
     QSaveFile f(path);
     if (!f.open(QIODevice::WriteOnly)) {
-        QMessageBox::warning(this, "Exportación", f.errorString());
+        QMessageBox::warning(this, text("Exportación"), f.errorString());
         return;
     }
     f.write(diagnostics_->toPlainText().toUtf8());
-    f.write("\n\nESTADO\n");
+    f.write(text("\n\nESTADO\n").toUtf8());
     f.write(QJsonDocument(view_).toJson());
-    f.write("\n\nREGISTROS\n");
+    f.write(text("\n\nREGISTROS\n").toUtf8());
     QFile log(dataDir_ + "/consolelan.log");
     if (log.open(QIODevice::ReadOnly))
-        f.write(log.readAll());
+        for (const auto &line : QString::fromUtf8(log.readAll()).split('\n'))
+            f.write(message(line).toUtf8() + "\n");
     if (!f.commit())
-        QMessageBox::warning(this, "Exportación", f.errorString());
+        QMessageBox::warning(this, text("Exportación"), f.errorString());
 }
 } // namespace cl

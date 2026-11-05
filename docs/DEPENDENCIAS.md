@@ -6,7 +6,7 @@ Revisado el 5 de noviembre de 2026 con documentación de los proyectos:
 | --- | --- | --- |
 | C++ / MSVC | MSVC 19.50.35728, toolset 14.50.35717 | Visual Studio Build Tools 2026, compilador x64, C++20 |
 | Windows SDK | 10.0.26100.0 | Winsock, IP Helper y API Windows; destino Windows 10 |
-| Qt | 6.12.0, msvc2022_64 | Core, Gui y Widgets, enlace dinámico |
+| Qt | 6.12.0, msvc2022_64 | Core, Gui y Widgets, enlace dinámico; Test para comprobaciones de interfaz |
 | CMake / Ninja | Ver `build-info.txt` del paquete/informe de ejecución | Configuración y compilación reproducibles |
 | Npcap SDK | 1.17 | Cabeceras; descarga oficial fijada por SHA256 en fetch-deps.ps1 |
 | Npcap runtime local | 1.86 / libpcap 1.10.6, 64-bit time_t | Probado localmente; controlador instalado por el usuario |
@@ -44,3 +44,7 @@ Las reglas de firewall son una tarea opcional desmarcada y requieren consentimie
 Fuentes: [opciones IP de Winsock](https://learn.microsoft.com/en-us/windows/win32/winsock/ipproto-ip-socket-options), [New-NetFirewallRule](https://learn.microsoft.com/en-us/powershell/module/netsecurity/new-netfirewallrule), [runtime Microsoft](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist), [Inno Setup](https://jrsoftware.org/isdl.php).
 
 Los binarios de ConsoleLAN no están firmados con certificado de editor. El paquete no incluye claves, certificados privados ni credenciales. No se han modificado en este entorno las reglas de firewall del usuario para probar la aplicación.
+
+## Actualización 1.1
+
+La interfaz usa un catálogo propio `i18n/en.json` integrado mediante recursos Qt y QTranslator, sin archivos de traducción externos. Se mantienen las dependencias Qt Base de 1.0. Qt Test solo se utiliza al compilar/ejecutar las pruebas y no se incluye como requisito del ejecutable distribuido. Los temas usan Fusion/QPalette y la API DWM de Windows para la barra de título compatible. El instalador admite español e inglés.

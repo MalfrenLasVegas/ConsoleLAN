@@ -1,5 +1,7 @@
 # Informe de entrega — ConsoleLAN 1.0
 
+Informe histórico de la versión 1.0. Para tema oscuro e idiomas consulte [la actualización 1.1](INFORME-1.1.md).
+
 Fecha: 5 de noviembre de 2026. Proyecto en `F:\ConsoleLAN`.
 
 ## Funcionalidad implementada
