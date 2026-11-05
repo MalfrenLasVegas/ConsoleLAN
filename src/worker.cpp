@@ -53,7 +53,7 @@ void Worker::run(std::stop_token stop) {
         }
         emit logged(s);
     };
-    log("ConsoleLAN 1.2.1 iniciado. " + Capture::version());
+    log("ConsoleLAN 1.2.2 iniciado. " + Capture::version());
     if (!store.error.isEmpty())
         log(store.error);
     auto flush = [&]() {

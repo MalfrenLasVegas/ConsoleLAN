@@ -3,9 +3,43 @@
 #include "capture.hpp"
 #include <iphlpapi.h>
 #include <netioapi.h>
+#include <fwpmu.h>
 #include <wintun.h>
 #include <thread>
 namespace cl {
+static DWORD installLoopGuard(HANDLE &engine, UINT64 &filterId, NET_LUID net, const QString &name) {
+    FWPM_SESSION0 filteringSession{};
+    filteringSession.flags = FWPM_SESSION_FLAG_DYNAMIC;
+    DWORD guardResult = FwpmEngineOpen0(nullptr, RPC_C_AUTHN_WINNT, nullptr, &filteringSession, &engine);
+    if (guardResult != ERROR_SUCCESS)
+        return guardResult;
+    FWPM_SUBLAYER0 sublayer{};
+    const auto uuid = QUuid::createUuid().toRfc4122();
+    memcpy(&sublayer.subLayerKey, uuid.constData(), sizeof(GUID));
+    sublayer.displayData.name = const_cast<wchar_t *>(L"ConsoleLAN local access");
+    sublayer.weight = 0x7f00;
+    guardResult = FwpmSubLayerAdd0(engine, &sublayer, nullptr);
+    if (guardResult != ERROR_SUCCESS)
+        return guardResult;
+    FWPM_FILTER_CONDITION0 condition{};
+    condition.fieldKey = FWPM_CONDITION_IP_FORWARD_INTERFACE;
+    condition.matchType = FWP_MATCH_EQUAL;
+    condition.conditionValue.type = FWP_UINT64;
+    condition.conditionValue.uint64 = &net.Value;
+    FWPM_FILTER0 filter{};
+    auto filterName = (name + " - block routed re-entry").toStdWString();
+    filter.displayData.name = filterName.data();
+    filter.layerKey = FWPM_LAYER_IPFORWARD_V4;
+    filter.subLayerKey = sublayer.subLayerKey;
+    filter.action.type = FWP_ACTION_BLOCK;
+    filter.weight.type = FWP_EMPTY;
+    filter.numFilterConditions = 1;
+    filter.filterCondition = &condition;
+    guardResult = FwpmFilterAdd0(engine, &filter, nullptr, &filterId);
+    if (guardResult != ERROR_SUCCESS)
+        return guardResult;
+    return ERROR_SUCCESS;
+}
 struct AccessAdapter::Impl {
     HMODULE dll = nullptr;
     WINTUN_CREATE_ADAPTER_FUNC *create = nullptr;
@@ -23,6 +57,8 @@ struct AccessAdapter::Impl {
     MIB_UNICASTIPADDRESS_ROW address{};
     bool addressAdded = false;
     QList<MIB_IPFORWARD_ROW2> routes;
+    HANDLE filtering = nullptr;
+    UINT64 loopGuard = 0;
 };
 AccessAdapter::AccessAdapter() : impl_(std::make_unique<Impl>()) {}
 AccessAdapter::~AccessAdapter() {
@@ -45,6 +81,13 @@ void AccessAdapter::close() {
         a.closeAdapter(a.adapter);
         a.adapter = nullptr;
     }
+    // Keep the guard until the routes and interface have gone. Dynamic WFP objects
+    // are also removed by BFE if the helper process crashes.
+    if (a.filtering) {
+        FwpmEngineClose0(a.filtering);
+        a.filtering = nullptr;
+        a.loopGuard = 0;
+    }
     if (a.dll) {
         FreeLibrary(a.dll);
         a.dll = nullptr;
@@ -56,6 +99,18 @@ quint32 AccessAdapter::index() const {
     ConvertInterfaceLuidToIndex(&impl_->net, &i);
     return i;
 }
+quint64 AccessAdapter::loopGuardId() const {
+    return impl_->loopGuard;
+}
+#ifdef CONSOLELAN_NATIVE_TESTS
+bool AccessAdapter::removeLoopGuardForTest() {
+    auto &a = *impl_;
+    if (!a.filtering || !a.loopGuard || FwpmFilterDeleteById0(a.filtering, a.loopGuard) != ERROR_SUCCESS)
+        return false;
+    a.loopGuard = 0;
+    return true;
+}
+#endif
 bool AccessAdapter::open(const AccessPlan &p, QString name) {
     close();
     error.clear();
@@ -75,19 +130,30 @@ bool AccessAdapter::open(const AccessPlan &p, QString name) {
     if (!a.field)                                                                                            \
         return fail("Wintun incompatible: " #fn);
     WLOAD(create, WintunCreateAdapter)
-    WLOAD(closeAdapter, WintunCloseAdapter) WLOAD(luid, WintunGetAdapterLUID) WLOAD(start, WintunStartSession)
-        WLOAD(end, WintunEndSession) WLOAD(receive, WintunReceivePacket)
-            WLOAD(release, WintunReleaseReceivePacket) WLOAD(allocate, WintunAllocateSendPacket)
-                WLOAD(send, WintunSendPacket)
+    WLOAD(closeAdapter, WintunCloseAdapter)
+    WLOAD(luid, WintunGetAdapterLUID)
+    WLOAD(start, WintunStartSession)
+    WLOAD(end, WintunEndSession) WLOAD(receive, WintunReceivePacket)
+        WLOAD(release, WintunReleaseReceivePacket) WLOAD(allocate, WintunAllocateSendPacket)
+            WLOAD(send, WintunSendPacket)
 #undef WLOAD
         // Stable identity; never open, reconfigure or remove somebody else's adapter.
         GUID guid{0x3c25397a, 0x0c31, 0x4b99, {0xbf, 0x36, 0x43, 0xf5, 0x37, 0xc5, 0xb0, 0x55}};
     if (name == "ConsoleLAN Test")
         guid.Data4[7] = 0x56;
+    if (name == "ConsoleLAN Ingress Test")
+        guid.Data4[7] = 0x57;
     a.adapter = a.create(reinterpret_cast<LPCWSTR>(name.utf16()), L"ConsoleLAN", &guid);
     if (!a.adapter)
         return fail("No se pudo crear el adaptador ConsoleLAN Local");
     a.luid(a.adapter, &a.net);
+    // Locally originated sockets do not traverse IPFORWARD. Block only routed
+    // re-entry into this particular virtual interface, never the physical NIC
+    // or VPN. Otherwise Windows forwarding can loop our Npcap injection back
+    // into Wintun until TTL expires (not a new packet from a local application).
+    const auto guardResult = installLoopGuard(a.filtering, a.loopGuard, a.net, name);
+    if (guardResult != ERROR_SUCCESS)
+        return fail("No se pudo activar la protección contra bucles del acceso local", guardResult);
     MIB_IPINTERFACE_ROW iface{};
     InitializeIpInterfaceEntry(&iface);
     iface.Family = AF_INET;
@@ -144,7 +210,6 @@ bool AccessAdapter::open(const AccessPlan &p, QString name) {
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
     return fail("No se pudo activar la IP del adaptador propio", ERROR_TIMEOUT);
-    return true;
 }
 std::optional<QByteArray> AccessAdapter::receive() {
     auto &a = *impl_;
@@ -321,6 +386,7 @@ int accessHelperMain(const QString &pipeName, quint32 parentPid) {
         if (clockMs() - reported > 400) {
             if (!pipeSend(pipe, {{"state", current ? "active" : "starting"},
                                  {"pcIp", current ? ipText(current->pcIp()) : QString()},
+                                 {"loopGuard", current.has_value() && tun.loopGuardId() != 0},
                                  {"sent", double(sent)},
                                  {"received", double(received)},
                                  {"filtered", double(filtered)}}))
@@ -337,4 +403,51 @@ int accessHelperMain(const QString &pipeName, quint32 parentPid) {
     CloseHandle(parent);
     return error.isEmpty() ? 0 : 5;
 }
+#ifdef CONSOLELAN_NATIVE_TESTS
+int liveAccessGuardTest(const QString &reportPath) {
+    QFile report(reportPath);
+    if (!report.open(QIODevice::WriteOnly | QIODevice::Truncate))
+        return 1;
+    const GUID guid{0x3c25397a, 0x0c31, 0x4b99, {0xbf, 0x36, 0x43, 0xf5, 0x37, 0xc5, 0xb0, 0x55}};
+    NET_LUID net{};
+    if (ConvertInterfaceGuidToLuid(&guid, &net) != NO_ERROR) {
+        report.write("ERROR: ConsoleLAN Local is not active\n");
+        return 2;
+    }
+    NET_IFINDEX index = 0;
+    ConvertInterfaceLuidToIndex(&net, &index);
+    const auto all = adapters();
+    if (!std::any_of(all.cbegin(), all.cend(), [&](const auto &a) {
+            return a.index == index && a.name == "ConsoleLAN Local" && a.up;
+        })) {
+        report.write("ERROR: dedicated adapter identity mismatch\n");
+        return 3;
+    }
+    HANDLE engine = nullptr;
+    UINT64 filter = 0;
+    auto rc = installLoopGuard(engine, filter, net, "ConsoleLAN Local temporary validation");
+    if (rc != ERROR_SUCCESS) {
+        report.write(("ERROR: WFP " + QByteArray::number(rc) + "\n"));
+        if (engine)
+            FwpmEngineClose0(engine);
+        return 4;
+    }
+    report.write("READY: temporary guard active only on ConsoleLAN Local; no addresses or routes changed\n");
+    report.flush();
+    const auto end = clockMs() + 120000;
+    while (clockMs() < end) {
+        MIB_IPINTERFACE_ROW row{};
+        InitializeIpInterfaceEntry(&row);
+        row.Family = AF_INET;
+        row.InterfaceLuid = net;
+        if (GetIpInterfaceEntry(&row) != NO_ERROR)
+            break;
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+    FwpmEngineClose0(engine);
+    report.write("CLOSED: temporary guard removed\n");
+    report.flush();
+    return 0;
+}
+#endif
 } // namespace cl

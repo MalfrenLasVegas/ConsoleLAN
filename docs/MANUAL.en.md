@@ -1,4 +1,4 @@
-# ConsoleLAN 1.2.1 manual
+# ConsoleLAN 1.2.2 manual
 
 ## Language and appearance
 
@@ -93,3 +93,11 @@ Disabling local access, leaving the room or closing ConsoleLAN removes its own h
 Cancelling or denying administrator permission leaves local access disabled without stopping the room. Loss of a valid local IP/MAC/Ethernet target stops local access; enable it again after resolving the issue. This is IPv4-only and creates no Windows bridges, NAT or default route.
 
 The automated 1.2 test uses the signed driver and real Windows TCP for passive FTP against a simulated console. This does not certify a physical PS5 FTP server or a real console gameplay session.
+
+## TCP and FTP without changing the home network (1.2.2)
+
+Optional PC access allows any TCP port on registered local consoles, not just 21 or 2121. Use the port configured by the console service. Passive FTP uses a separate outbound TCP data connection and is also supported when its destination remains an authorized local console. The console must already be running its server.
+
+While enabled, a temporary WFP guard blocks only packets Windows tries to forward into the ConsoleLAN adapter. Locally originated application connections remain available. This prevents reinjection loops when Windows forwarding is enabled elsewhere, without changing physical Ethernet/VPN forwarding, IP/DNS settings or persistent Windows Firewall rules. The dynamic guard is removed with the adapter/helper session. Failure to install it leaves access disabled rather than unprotected.
+
+Update the main app and `ConsoleLAN.Access.exe` together: an old helper that cannot confirm the guard is rejected. Connection refusal before an FTP greeting requires checking the server and port. Physical validation included a server restart followed by FTP connection, login and passive listing; no console files were written.

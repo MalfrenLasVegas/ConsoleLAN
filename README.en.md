@@ -1,10 +1,16 @@
-# ConsoleLAN 1.2.1
+# ConsoleLAN 1.2.2
 
 [Español](README.md) · English
 
 Windows x64 application in C++20, Qt 6 Widgets, Winsock and Npcap for selectively extending console LAN traffic over an existing VPN. Each room's host coordinates IP reservations and relays UDP traffic. No accounts or central server are required.
 
-## Fixed in 1.2.1
+## TCP and FTP in 1.2.2
+
+Optional local PC access supports any TCP port on registered local consoles, without an FTP-only port allowlist. A scoped, temporary WFP guard prevents Windows forwarding from looping Ethernet-injected packets back into Wintun. Existing Ethernet/VPN forwarding settings are not changed.
+
+Validated with real Windows TCP, synthetic passive FTP binary upload/download, and connection/login/passive listing on a physical PS5 FTP server. The user has also reported successful cross-home LAN games; this does not certify every game or hardware combination. [Implementation and validation](docs/INFORME-1.2.2.md).
+
+## Identity fix in 1.2.1
 
 Ignore frames emitted or forwarded by the PC Ethernet adapter before console identity learning. This prevents false IP/MAC conflicts when Windows forwarding is enabled while retaining detection of genuine duplicate console addresses. Reservations and network settings remain unchanged. See the [patch report](docs/INFORME-1.2.1.md).
 
@@ -18,12 +24,12 @@ Ignore frames emitted or forwarded by the PC Ethernet adapter before console ide
 
 ## Downloads
 
-- [Windows x64 installer](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.2.1/ConsoleLAN-1.2.1-win64-setup.exe)
-- [Portable package with Qt](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.2.1/ConsoleLAN-1.2.1-win64-portable.zip)
-- [Full source and illustrated documentation](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.2.1/ConsoleLAN-1.2.1-source.zip)
-- [SHA256 checksums](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.2.1/SHA256SUMS.txt)
+- [Windows x64 installer](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.2.2/ConsoleLAN-1.2.2-win64-setup.exe)
+- [Portable package with Qt](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.2.2/ConsoleLAN-1.2.2-win64-portable.zip)
+- [Full source and illustrated documentation](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.2.2/ConsoleLAN-1.2.2-source.zip)
+- [SHA256 checksums](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.2.2/SHA256SUMS.txt)
 
-Read the [1.2.1 release notes](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/tag/v1.2.1). [Npcap](https://npcap.com/#download) must be installed separately. The portable package requires an up-to-date Microsoft Visual C++ Runtime x64. Qt Base sources and license notices are included in the binary packages.
+Read the [1.2.2 release notes](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/tag/v1.2.2). [Npcap](https://npcap.com/#download) must be installed separately. The portable package requires an up-to-date Microsoft Visual C++ Runtime x64. Qt Base sources and license notices are included in the binary packages.
 
 ## Interface
 
@@ -31,7 +37,7 @@ Read the [1.2.1 release notes](https://github.com/MalfrenLasVegas/ConsoleLAN/rel
 
 ![ConsoleLAN 1.2 in Light theme and English](docs/images/consolelan-1.2-light-en.png)
 
-Real UI rendered with synthetic data. These screenshots do not prove console gameplay. The native integration test uses signed Wintun and real Windows TCP against a simulated FTP console; physical PS5 FTP and console gameplay still require hardware acceptance. See the [manual](docs/MANUAL.en.md) and [implementation/validation report](docs/INFORME-1.2.1.md).
+Real UI rendered with synthetic data. These screenshots do not prove console gameplay. The native integration test uses signed Wintun and real Windows TCP against a simulated FTP console; physical PS5 FTP connection/login/passive listing have also been checked. Physical file transfers and each game/hardware combination need their own acceptance. See the [manual](docs/MANUAL.en.md) and [implementation/validation report](docs/INFORME-1.2.2.md).
 
 ## Getting started
 

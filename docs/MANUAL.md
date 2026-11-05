@@ -1,4 +1,4 @@
-# Manual de ConsoleLAN 1.2.1
+# Manual de ConsoleLAN 1.2.2
 
 [English manual](MANUAL.en.md)
 
@@ -40,7 +40,7 @@ Pulse **Añadir consola**, escriba un nombre y seleccione la fila. Puede recorda
 
 En la consola elija Ethernet, configuración manual y la IP/máscara mostradas. Deje gateway y DNS sin configurar o en `0.0.0.0` si su sistema lo admite. ConsoleLAN no proporciona DNS ni salida a Internet. No hay un servidor oculto en `.1` y no se debe copiar el DNS doméstico esperando que funcione a través del túnel.
 
-Algunas consolas obligan a escribir valores de gateway/DNS antes de guardar. Cuando admitan una configuración LAN sin servicios, puede usar la IP propia de la consola como gateway y DNS **solo como marcador de configuración**, sabiendo que no hay servicio en esas direcciones y que la prueba de Internet fallará. Eso no aporta Internet, DNS ni garantía de que el firmware conserve la configuración. Si la consola no permite continuar hacia el modo LAN sin validar esos servicios, esa combinación de firmware/juego requiere una solución de red adicional fuera de ConsoleLAN 1.2.1; no se muestra como compatible sin probarla.
+Algunas consolas obligan a escribir valores de gateway/DNS antes de guardar. Cuando admitan una configuración LAN sin servicios, puede usar la IP propia de la consola como gateway y DNS **solo como marcador de configuración**, sabiendo que no hay servicio en esas direcciones y que la prueba de Internet fallará. Eso no aporta Internet, DNS ni garantía de que el firmware conserve la configuración. Si la consola no permite continuar hacia el modo LAN sin validar esos servicios, esa combinación de firmware/juego requiere una solución de red adicional fuera de ConsoleLAN 1.2.2; no se muestra como compatible sin probarla.
 
 La prueba de Internet puede fallar con la LAN por cable disponible. Entre en el modo LAN/System Link del juego; no en sus modos PSN/online. Los requisitos de cada juego (versiones, contenidos, límites de latencia y modo LAN) se validan por separado.
 
@@ -91,3 +91,11 @@ Cuando aparezca **Acceso local activo**, abra su cliente FTP y use la IP reserva
 Si Windows cancela o deniega la elevación, el acceso queda desactivado y la sala continúa funcionando. Si la consola pierde la IP/MAC/Ethernet válida, el acceso se detiene. Tras corregir el problema, puede activarlo de nuevo. El acceso solo es IPv4; no instala puentes Windows, NAT ni una ruta por defecto.
 
 La prueba automatizada de 1.2 utiliza el controlador firmado y TCP de Windows para una transferencia FTP pasiva contra una consola simulada. No sustituye la prueba con el servidor FTP de su PS5 ni certifica una partida entre consolas.
+
+## TCP y FTP sin cambiar la red (1.2.2)
+
+**Acceso desde este PC** permite cualquier puerto TCP en las consolas locales registradas. No es una excepción solo para 21 o 2121: use el puerto que tenga configurado el servicio de la consola. El modo FTP pasivo abre otra conexión TCP hacia un puerto de datos y también está permitido, siempre que el destino siga siendo una consola local autorizada. La consola debe tener iniciado su servidor.
+
+Mientras el acceso está activo, se crea una protección WFP temporal que bloquea únicamente el tráfico que Windows intenta reenviar hacia el adaptador ConsoleLAN. Las conexiones originadas por las aplicaciones del PC siguen funcionando. Esto evita los bucles de reinyección cuando el reenvío de Windows está activado en otras interfaces. No cambia esa opción, las reglas persistentes del Firewall de Windows, las IP o el DNS de Ethernet/VPN. La protección desaparece al retirar el adaptador, cerrar el auxiliar o terminar su sesión dinámica. Si no puede crearse, el acceso no se activa sin protección.
+
+Actualice la aplicación y `ConsoleLAN.Access.exe` juntos: la aplicación no acepta como activo un auxiliar antiguo que no confirme la protección. El servidor FTP debe estar activo en la IP reservada de la consola; una conexión rechazada antes del saludo FTP requiere comprobar el servicio y el puerto. En la validación física se reinició el servidor FTP y se comprobó conexión, login y listado pasivo sin escribir archivos.

@@ -53,6 +53,15 @@ int main(int argc, char **argv) {
               "no Internet route through local access");
         check(!accessToEthernet(*plan, packet(net | 1, net | 255)), "broadcast cannot enter local access");
         check(!accessToEthernet(*plan, packet(net | 2, net | 2)), "spoofed PC source blocked");
+        for (quint16 port : {1, 21, 1337, 2121, 21210, 65535}) {
+            auto tcpPacket = packet(net | 1, net | 2);
+            p16(tcpPacket, 20, 45678);
+            p16(tcpPacket, 22, port);
+            auto forwarded = accessToEthernet(*plan, tcpPacket);
+            check(forwarded && forwarded->bytes.mid(14) == tcpPacket,
+                  qPrintable(
+                      QString("TCP port %1 and payload are preserved without a port allowlist").arg(port)));
+        }
         auto bad = packet(net | 1, net | 2);
         bad[0] = 0x65;
         check(!accessToEthernet(*plan, bad), "IPv6 cannot enter IPv4 local path");

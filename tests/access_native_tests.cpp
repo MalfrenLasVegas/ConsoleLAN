@@ -3,6 +3,7 @@
 #include "access_pipe.hpp"
 #include <iphlpapi.h>
 #include <netioapi.h>
+#include <fwpmu.h>
 #include <future>
 #include <iostream>
 #include <stdexcept>
@@ -100,7 +101,7 @@ struct Socket {
 static QStringList existingAddresses() {
     QStringList out;
     for (const auto &a : adapters())
-        if (!a.name.startsWith("ConsoleLAN"))
+        if (a.name != "ConsoleLAN Test" && a.name != "ConsoleLAN Ingress Test")
             out << a.id + "|" + ipText(a.ip) + "/" + QString::number(a.prefix);
     out.sort();
     return out;
@@ -169,6 +170,8 @@ struct HelperPeer {
                 if ((*reply)["state"] == "error")
                     throw std::runtime_error(qPrintable((*reply)["error"].toString()));
                 active = (*reply)["state"] == "active";
+                if (active)
+                    check((*reply)["loopGuard"].toBool(), "helper reports routing-loop protection active");
             }
             if (broken)
                 break;
@@ -224,6 +227,8 @@ int main(int argc, char **argv) {
         handoff.close();
         ExitProcess(0); // Deliberately bypass destructors to exercise parent-crash cleanup.
     }
+    if (app.arguments().size() == 3 && app.arguments()[1] == "--live-guard")
+        return liveAccessGuardTest(app.arguments()[2]);
     QFile report;
     if (app.arguments().size() == 3 && app.arguments()[1] == "--report") {
         report.setFileName(app.arguments()[2]);
@@ -255,7 +260,58 @@ int main(int argc, char **argv) {
         AccessPlan plan{net, {{net | 2, "02:00:00:00:00:02", "synthetic-ethernet"}}};
         AccessAdapter tun;
         check(tun.open(plan, "ConsoleLAN Test"), qPrintable(tun.error));
+        HANDLE filters = nullptr;
+        check(FwpmEngineOpen0(nullptr, RPC_C_AUTHN_WINNT, nullptr, nullptr, &filters) == ERROR_SUCCESS,
+              "query only the test forwarding guard");
+        auto closeFilters = qScopeGuard([&] { FwpmEngineClose0(filters); });
+        auto verifyGuard = [&](quint64 filterId) {
+            FWPM_FILTER0 *filter = nullptr;
+            check(FwpmFilterGetById0(filters, filterId, &filter) == ERROR_SUCCESS,
+                  "dynamic forwarding guard exists");
+            auto free = qScopeGuard([&] { FwpmFreeMemory0(reinterpret_cast<void **>(&filter)); });
+            check(IsEqualGUID(filter->layerKey, FWPM_LAYER_IPFORWARD_V4) &&
+                      filter->action.type == FWP_ACTION_BLOCK && filter->numFilterConditions == 1 &&
+                      IsEqualGUID(filter->filterCondition[0].fieldKey, FWPM_CONDITION_IP_FORWARD_INTERFACE),
+                  "guard blocks forwarded traffic only at the virtual egress interface");
+        };
+        verifyGuard(tun.loopGuardId());
+        {
+            AccessPlan incoming{0x0afdf900, {{0x0afdf902, "02:00:00:00:00:03", "synthetic-ethernet"}}};
+            check(subnetConflict(incoming.subnet, adapters()).isEmpty(),
+                  "second isolated test subnet is free");
+            AccessAdapter ingress;
+            check(ingress.open(incoming, "ConsoleLAN Ingress Test"), qPrintable(ingress.error));
+            MIB_IPINTERFACE_ROW iface{};
+            InitializeIpInterfaceEntry(&iface);
+            iface.Family = AF_INET;
+            iface.InterfaceIndex = ingress.index();
+            check(GetIpInterfaceEntry(&iface) == NO_ERROR, "read test ingress interface");
+            iface.ForwardingEnabled = TRUE;
+            iface.SitePrefixLength = 0;
+            check(SetIpInterfaceEntry(&iface) == NO_ERROR, "enable routing only on disposable test ingress");
+            const auto forwarded = tcp(incoming.subnet | 2, net | 2, 40000, 45678, 123, 0, 2);
+            auto arrives = [&](int timeout) {
+                const auto deadline = clockMs() + timeout;
+                while (clockMs() < deadline) {
+                    if (auto packet = tun.receive())
+                        if (packet->size() >= 20 && be32(*packet, 12) == (incoming.subnet | 2) &&
+                            be32(*packet, 16) == (net | 2))
+                            return true;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(2));
+                }
+                return false;
+            };
+            check(tun.removeLoopGuardForTest(), "remove test guard to reproduce legacy routed re-entry");
+            check(ingress.send(forwarded), "inject synthetic transit packet on disposable ingress");
+            check(arrives(1500), "without guard Windows forwards transit packet back into Wintun");
+            tun.close();
+            check(tun.open(plan, "ConsoleLAN Test"), qPrintable(tun.error));
+            check(ingress.send(forwarded), "repeat identical transit packet with guard active");
+            check(!arrives(500), "guard prevents routed re-entry without disabling physical forwarding");
+            ingress.close();
+        }
         const auto adapterIndex = tun.index();
+        const auto filterId = tun.loopGuardId();
         check(adapterIndex != 0, "native adapter has interface index");
         SOCKADDR_INET destination{};
         destination.Ipv4.sin_family = AF_INET;
@@ -268,7 +324,7 @@ int main(int argc, char **argv) {
         const QByteArray payload = QByteArray("ConsoleLAN FTP integration\n").repeated(200);
         auto client = std::async(std::launch::async, [&] {
             Socket control;
-            control.connectTo(net | 2, 21);
+            control.connectTo(net | 2, 2121);
             check(control.line().startsWith("220"), "FTP greeting over real Windows TCP");
             control.write("USER anonymous\r\n");
             check(control.line().startsWith("331"), "FTP USER response");
@@ -337,7 +393,7 @@ int main(int argc, char **argv) {
                 if (b->size() < ihl + 20 || quint8((*b)[9]) != 6)
                     continue;
                 const auto port = be16(*b, ihl + 2), local = be16(*b, ihl);
-                if (port != 21 && port != 21210 && port != 21211)
+                if (port != 2121 && port != 21210 && port != 21211)
                     continue;
                 auto &f = flows[port];
                 f.server = port;
@@ -354,7 +410,7 @@ int main(int argc, char **argv) {
                     continue;
                 }
                 f.ready = true;
-                if (port == 21 && !f.greeting) {
+                if (port == 2121 && !f.greeting) {
                     sendResponse(f, 0x18, "220 ConsoleLAN synthetic FTP peer\r\n");
                     f.greeting = true;
                 }
@@ -386,7 +442,7 @@ int main(int argc, char **argv) {
                     sendResponse(f, 0x10);
                     if (port == 21211 && storing) {
                         check(uploadBytes == payload, "uploaded binary matches across Windows TCP packets");
-                        sendResponse(flows[21], 0x18, "226 Upload complete\r\n");
+                        sendResponse(flows[2121], 0x18, "226 Upload complete\r\n");
                         uploaded = true;
                     }
                 }
@@ -396,7 +452,7 @@ int main(int argc, char **argv) {
                 for (int i = 0; i < payload.size(); i += 1200)
                     sendResponse(data, 0x18, payload.mid(i, 1200));
                 sendResponse(data, 0x11);
-                sendResponse(flows[21], 0x18, "226 Transfer complete\r\n");
+                sendResponse(flows[2121], 0x18, "226 Transfer complete\r\n");
                 transferred = true;
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -404,6 +460,9 @@ int main(int argc, char **argv) {
         client.get();
         check(transferred && uploaded, "FTP download and upload use independent passive TCP connections");
         tun.close();
+        FWPM_FILTER0 *removedFilter = nullptr;
+        check(FwpmFilterGetById0(filters, filterId, &removedFilter) == FWP_E_FILTER_NOT_FOUND,
+              "dynamic forwarding guard removed on close");
         auto until = clockMs() + 3000;
         while (clockMs() < until && hasRoute(adapterIndex))
             std::this_thread::sleep_for(std::chrono::milliseconds(50));

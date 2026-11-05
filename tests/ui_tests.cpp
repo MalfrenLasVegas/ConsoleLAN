@@ -188,7 +188,7 @@ class UiTests : public QObject {
         QVERIFY(label->text().contains("10.253.42.1"));
         presentation().setLanguage("en");
         QTRY_COMPARE(toggle->text(), QString("Disable local access"));
-        QVERIFY(label->text().startsWith("Local access enabled"));
+        QVERIFY(label->text().startsWith("Local TCP/IP access enabled"));
         view["localAccess"] = QJsonObject{
             {"state", "error"},
             {"requested", false},

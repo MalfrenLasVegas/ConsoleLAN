@@ -84,7 +84,7 @@ static QTableWidget *table(QStringList headings) {
 }
 Window::Window(QString dataDir, bool startWorker) : dataDir_(std::move(dataDir)) {
 
-    setWindowTitle("ConsoleLAN 1.2.1 — LAN entre casas");
+    setWindowTitle("ConsoleLAN 1.2.2 — LAN entre casas");
     resize(1280, 920);
     setMinimumSize(1000, 700);
     auto central = new QWidget;
@@ -494,9 +494,9 @@ Window::Window(QString dataDir, bool startWorker) : dataDir_(std::move(dataDir))
     accessToggle_->setProperty("dynamicText", true);
     accessHeading->addWidget(accessToggle_);
     accessLayout->addLayout(accessHeading);
-    accessLayout->addWidget(makeLabel(
-        "Accede por FTP u otros servicios a tus consolas locales sin cambiar la IP de tu Ethernet doméstica.",
-        "helper"));
+    accessLayout->addWidget(makeLabel("Accede por FTP o a cualquier puerto TCP de tus consolas locales sin "
+                                      "cambiar la IP de tu Ethernet doméstica.",
+                                      "helper"));
     accessStatus_ = makeLabel({}, "muted");
     accessStatus_->setObjectName("localAccessStatus");
     accessLayout->addWidget(accessStatus_);
@@ -690,7 +690,7 @@ Window::Window(QString dataDir, bool startWorker) : dataDir_(std::move(dataDir))
             return;
         }
         QDialog dialog(this);
-        dialog.setWindowTitle(text("Manual de ConsoleLAN 1.2.1"));
+        dialog.setWindowTitle(text("Manual de ConsoleLAN 1.2.2"));
         dialog.resize(820, 700);
         auto layout = new QVBoxLayout(&dialog);
         auto browser = new QTextBrowser;
@@ -836,8 +836,8 @@ void Window::updateGuidance() {
     accessToggle_->setText(text(accessRequested ? "Desactivar acceso local" : "Activar acceso local"));
     const auto accessState = access["state"].toString();
     accessStatus_->setText(
-        accessState == "active" ? text("Acceso local activo · IP de este PC: %1. En tu cliente FTP, conecta "
-                                       "a la IP de tu consola y al puerto de su servidor.")
+        accessState == "active" ? text("Acceso TCP/IP activo · IP de este PC: %1. Usa la IP de la consola "
+                                       "y el puerto de su servicio.")
                                       .arg(access["pcIp"].toString())
         : accessState == "starting"
             ? text("Preparando el adaptador propio. Acepta el permiso de Windows para continuar…")
@@ -906,7 +906,7 @@ void Window::updateGuidance() {
 void Window::retranslate() {
     if (!uiReady_)
         return;
-    setWindowTitle(text("ConsoleLAN 1.2.1 — LAN entre casas"));
+    setWindowTitle(text("ConsoleLAN 1.2.2 — LAN entre casas"));
     translateUiText(this);
     vpn_->setAccessibleName(text("VPN de este PC"));
     ethernet_->setAccessibleName(text("Ethernet de las consolas"));
@@ -1153,7 +1153,7 @@ void Window::updateView(QJsonObject nextView) {
                  : rtt < 0      ? "—"
                                 : QString::number(rtt) + " ms"));
     QString diag =
-        text("ConsoleLAN 1.2.1 · diagnóstico\n\nVPN / socket: %1\nNpcap: %2\nEstado: %3\nTráfico Ethernet "
+        text("ConsoleLAN 1.2.2 · diagnóstico\n\nVPN / socket: %1\nNpcap: %2\nEstado: %3\nTráfico Ethernet "
              "observado: %4\nInyecciones realizadas: %5\nErrores de envío: %6\nRechazos de protocolo: "
              "%7\nFiltradas: %8\nDescartes por cola: %9\n\nUn paquete observado no demuestra conectividad "
              "entre consolas.\nLa latencia mide ida y vuelta al maestro, no el ping del juego.\n\n")

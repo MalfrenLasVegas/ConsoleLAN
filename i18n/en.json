@@ -324,5 +324,13 @@
   "ConsoleLAN 1.2.1 iniciado. %1": "ConsoleLAN 1.2.1 started. %1",
   "No se pudo identificar la MAC de la Ethernet: %1": "Could not identify the Ethernet adapter MAC: %1",
   "Conflicto IP/MAC en %1: MAC guardada %2, MAC observada %3 (Ethernet %4).": "IP/MAC conflict at %1: saved MAC %2, observed MAC %3 (Ethernet %4).",
-  "Conflicto de IP: revisa la consola o usa Volver a detectar la consola": "IP conflict: check the console or use Detect this console again"
+  "Conflicto de IP: revisa la consola o usa Volver a detectar la consola": "IP conflict: check the console or use Detect this console again",
+  "ConsoleLAN 1.2.2 — LAN entre casas": "ConsoleLAN 1.2.2 — LAN across homes",
+  "Manual de ConsoleLAN 1.2.2": "ConsoleLAN 1.2.2 manual",
+  "ConsoleLAN 1.2.2 · diagnóstico\n\nVPN / socket: %1\nNpcap: %2\nEstado: %3\nTráfico Ethernet observado: %4\nInyecciones realizadas: %5\nErrores de envío: %6\nRechazos de protocolo: %7\nFiltradas: %8\nDescartes por cola: %9\n\nUn paquete observado no demuestra conectividad entre consolas.\nLa latencia mide ida y vuelta al maestro, no el ping del juego.\n\n": "ConsoleLAN 1.2.2 · diagnostics\n\nVPN / socket: %1\nNpcap: %2\nStatus: %3\nObserved Ethernet packets: %4\nFrames injected: %5\nSend errors: %6\nProtocol rejections: %7\nFiltered frames: %8\nQueue drops: %9\n\nAn observed packet does not prove connectivity between consoles.\nLatency measures the round trip to the host, not in-game ping.\n\n",
+  "ConsoleLAN 1.2.2 iniciado. %1": "ConsoleLAN 1.2.2 started. %1",
+  "No se pudo activar la protección contra bucles del acceso local (Windows %1)": "Could not enable local access routing-loop protection (Windows %1)",
+  "El auxiliar de acceso local está desactualizado. Actualiza ConsoleLAN y ConsoleLAN.Access.exe juntos.": "The local access helper is outdated. Update ConsoleLAN and ConsoleLAN.Access.exe together.",
+  "Accede por FTP o a cualquier puerto TCP de tus consolas locales sin cambiar la IP de tu Ethernet doméstica.": "Use FTP or any TCP port on your local consoles without changing your home Ethernet IP.",
+  "Acceso TCP/IP activo · IP de este PC: %1. Usa la IP de la consola y el puerto de su servicio.": "Local TCP/IP access enabled · This PC’s IP: %1. Use your console’s IP and the service port."
 }

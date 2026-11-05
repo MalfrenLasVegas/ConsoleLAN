@@ -1,4 +1,4 @@
-ConsoleLAN 1.2.1 for Windows x64
+ConsoleLAN 1.2.2 for Windows x64
 
 This version adds persistent Light/Dark themes and English/Spanish language selection. Both can be changed immediately in the application's sidebar without leaving a room. Your saved consoles, reservations and other settings are retained when upgrading from 1.0.
 
@@ -13,3 +13,5 @@ Microsoft Visual C++ Runtime x64 is installed if required. ConsoleLAN does not p
 User data is retained when uninstalling. The application has no publisher signing certificate; Windows may show a reputation warning.
 
 New in 1.2: optional local console access using a dedicated signed Wintun adapter, bundled with its license. Elevation is required only when enabling local access; the main application can run as a normal user. Only local consoles are accessible, without modifying home Ethernet or VPN settings.
+
+1.2.2: any TCP port on local consoles, passive FTP, and a scoped temporary WFP guard against adapter reinjection loops. Update the app and helper together. Forwarding options and persistent firewall rules on other interfaces are unchanged.

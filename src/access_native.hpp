@@ -14,6 +14,13 @@ class AccessAdapter {
     std::optional<QByteArray> receive();
     bool send(const QByteArray &ip);
     quint32 index() const;
+    quint64 loopGuardId() const;
+#ifdef CONSOLELAN_NATIVE_TESTS
+    bool removeLoopGuardForTest();
+#endif
 };
+#ifdef CONSOLELAN_NATIVE_TESTS
+int liveAccessGuardTest(const QString &reportPath);
+#endif
 int accessHelperMain(const QString &pipe, quint32 parentPid);
 } // namespace cl

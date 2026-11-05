@@ -149,6 +149,11 @@ void AccessController::run(std::stop_token stop) {
             }
             if (auto reply = pipeRead(pipe, broken)) {
                 lastStatus = clockMs();
+                if ((*reply)["state"] == "active" && !(*reply)["loopGuard"].toBool()) {
+                    error = "El auxiliar de acceso local está desactualizado. Actualiza ConsoleLAN y "
+                            "ConsoleLAN.Access.exe juntos.";
+                    break;
+                }
                 {
                     std::lock_guard l(mutex_);
                     status_ = *reply;
