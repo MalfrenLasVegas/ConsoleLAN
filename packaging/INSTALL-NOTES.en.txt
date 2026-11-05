@@ -1,6 +1,6 @@
-ConsoleLAN 1.1 for Windows x64
+ConsoleLAN 1.2.0 for Windows x64
 
-This version adds persistent Light/Dark themes and English/Spanish language selection. Both can be changed immediately in the application's top right without leaving a room. Your saved consoles, reservations and other settings are retained when upgrading from 1.0.
+This version adds persistent Light/Dark themes and English/Spanish language selection. Both can be changed immediately in the application's sidebar without leaving a room. Your saved consoles, reservations and other settings are retained when upgrading from 1.0.
 
 You need an existing VPN with UDP connectivity between PCs, wired Ethernet and Npcap installed separately from https://npcap.com/#download.
 
@@ -11,3 +11,5 @@ The firewall task is optional and unchecked. If selected, enter this PC's LOCAL 
 Microsoft Visual C++ Runtime x64 is installed if required. ConsoleLAN does not provide Internet, PSN, a gateway or DNS to consoles. Real hardware and each game's LAN mode must be validated; see docs/MANUAL.en.md and docs/ACEPTACION.md.
 
 User data is retained when uninstalling. The application has no publisher signing certificate; Windows may show a reputation warning.
+
+New in 1.2: optional local console access using a dedicated signed Wintun adapter, bundled with its license. Elevation is required only when enabling local access; the main application can run as a normal user. Only local consoles are accessible, without modifying home Ethernet or VPN settings.

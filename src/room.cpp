@@ -1,4 +1,5 @@
 #include "room.hpp"
+#include "access_policy.hpp"
 namespace cl {
 static QJsonArray arrayOf(const QList<Console> &cs) {
     QJsonArray a;
@@ -611,6 +612,10 @@ void Room::injectLocal(const QByteArray &b) {
             ++queueDrops;
 }
 void Room::relay(Id origin, Id seq, const QByteArray &b) {
+    if (isLocalAccessFrame(b, subnet_)) {
+        ++filtered;
+        return;
+    }
     auto route = routeFrame(b, origin, node, consoles_, owners_);
     if (!route.accepted) {
         ++filtered;
@@ -632,6 +637,10 @@ void Room::captured(const QString &adapter, const QByteArray &b, qint64 now) {
     now_ = now;
     if (!connected())
         return;
+    if (isLocalAccessFrame(b, subnet_)) {
+        ++filtered;
+        return;
+    }
     auto f = inspect(b);
     if (!f) {
         ++filtered;

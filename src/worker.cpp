@@ -1,4 +1,5 @@
 #include "worker.hpp"
+#include "access_controller.hpp"
 namespace cl {
 Worker::Worker(QString dataDir, QObject *parent)
     : QObject(parent), dataDir_(std::move(dataDir)), thread_([this](std::stop_token stop) { run(stop); }) {}
@@ -16,6 +17,7 @@ void Worker::run(std::stop_token stop) {
     // thread_ is declared last in the class so every object used by it is initialized.
     Store store(dataDir_ + "/state.json");
     Room room(&store);
+    AccessController localAccess;
     room.validateSubnet = [](quint32 network) { return subnetConflict(network, adapters()); };
     UdpSocket udp, discovery;
     Adapter selected;
@@ -50,7 +52,7 @@ void Worker::run(std::stop_token stop) {
         }
         emit logged(s);
     };
-    log("ConsoleLAN 1.1 iniciado. " + Capture::version());
+    log("ConsoleLAN 1.2.0 iniciado. " + Capture::version());
     if (!store.error.isEmpty())
         log(store.error);
     auto flush = [&]() {
@@ -97,6 +99,10 @@ void Worker::run(std::stop_token stop) {
         }
         for (auto &c : cmds) {
             auto op = c["op"].toString();
+            if (op == "localAccess") {
+                localAccess.enable(c["enabled"].toBool());
+                continue;
+            }
             if (!store.error.isEmpty()) {
                 log("Persistencia no disponible: " + store.error);
                 continue;
@@ -136,6 +142,7 @@ void Worker::run(std::stop_token stop) {
                     log("Búsqueda UDP en la VPN. Si no admite broadcast, use conexión directa.");
                 }
             } else if (op == "leave") {
+                localAccess.enable(false);
                 room.leave();
                 captures.clear();
             } else if (op == "add")
@@ -173,6 +180,7 @@ void Worker::run(std::stop_token stop) {
                 return a.up && a.id == selected.id && a.ip == selected.ip;
             });
             if (!present) {
+                localAccess.enable(false);
                 room.leave();
                 captures.clear();
                 flush();
@@ -300,11 +308,14 @@ void Worker::run(std::stop_token stop) {
                 caps.append(QJsonObject{{"adapter", id}, {"blocked", blocked[id] > now}});
             v["captures"] = caps;
             v["dataDir"] = dataDir_;
+            localAccess.update(v);
+            v["localAccess"] = localAccess.status();
             emit updated(v);
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(3));
     }
     room.leave();
+    localAccess.enable(false);
     flush();
     captures.clear();
     log("Cierre limpio: sockets y capturas liberados.");

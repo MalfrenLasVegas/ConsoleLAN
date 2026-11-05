@@ -1,4 +1,4 @@
-ConsoleLAN 1.1 para Windows x64
+ConsoleLAN 1.2.0 para Windows x64
 
 Incluye tema claro/oscuro y selector Español/English, con preferencias persistentes y aplicación inmediata sin salir de la sala. Actualizar desde 1.0 conserva sus consolas y reservas.
 
@@ -11,3 +11,5 @@ La tarea de firewall es opcional y está desmarcada. Si la selecciona, indique l
 Microsoft Visual C++ Runtime x64 se instala si no está presente. ConsoleLAN no da acceso a Internet, PSN ni DNS a las consolas. El funcionamiento de una partida requiere validar el hardware y el modo LAN del juego siguiendo docs/ACEPTACION.md.
 
 Los datos del usuario se conservan al desinstalar. La aplicación no tiene firma de editor; Windows puede mostrar una advertencia de reputación.
+
+Nuevo en 1.2: acceso local opcional por adaptador propio Wintun firmado, incluido con su licencia. Solo requiere elevación al activarlo; la aplicación principal puede funcionar como usuario normal. Solo permite acceder a las consolas locales, sin modificar la Ethernet o VPN domésticas.

@@ -1,14 +1,18 @@
-# Manual de ConsoleLAN 1.1
+# Manual de ConsoleLAN 1.2.0
 
 [English manual](MANUAL.en.md)
 
 ## Idioma y tema
 
-En la esquina superior derecha puede elegir **Idioma: Español / English** y **Tema: Claro / Oscuro**. Se aplican al momento, sin reiniciar ni abandonar la sala. El idioma actualiza etiquetas, estados, diagnóstico, registros visibles y el manual. No se traducen los nombres que haya escrito, las direcciones IP ni los nombres de adaptadores proporcionados por Windows.
+En la parte inferior de la barra lateral puede elegir **Idioma: Español / English** y **Tema: Claro / Oscuro**. Se aplican al momento, sin reiniciar ni abandonar la sala. El idioma actualiza etiquetas, estados, diagnóstico, registros visibles y el manual. No se traducen los nombres que haya escrito, las direcciones IP ni los nombres de adaptadores proporcionados por Windows.
 
 Ambas preferencias se guardan inmediatamente para su usuario y se restauran al abrir. La primera vez se usa español si Windows está en español e inglés en los demás casos, con tema claro inicial. Actualizar desde 1.0 conserva consolas, reservas y las preferencias existentes.
 
 El tema oscuro incluye tablas, campos, selección, controles deshabilitados, registros y diálogos Qt; la barra de título también se adapta en Windows compatible. Los detalles de errores nativos mantienen el idioma del controlador o de Windows. El archivo de registro conserva los mensajes originales; el visor y los mensajes legibles exportados siguen el idioma seleccionado.
+
+## Navegación
+
+**Jugar en LAN** reúne tres pasos: conexión, sala y consolas. **Diagnóstico** contiene los registros y herramientas de soporte; **Reservas**, las direcciones gestionadas por el anfitrión. Las opciones de subred y presupuesto UDP están plegadas en **Opciones avanzadas**. Seleccione una consola para ver su IP y copiar la configuración; **Gestionar** agrupa las acciones de Ethernet, MAC y eliminación.
 
 ## Preparar cada sede
 
@@ -20,9 +24,9 @@ La premisa de funcionamiento es que el hardware permita capturar e inyectar las 
 
 ## Crear y entrar
 
-1. Elija **VPN · transporte UDP** por nombre e IPv4. No elija la Ethernet doméstica como VPN. Los adaptadores desconectados aparecen para diagnóstico, pero no sirven para iniciar.
-2. En el anfitrión, escriba nombre de sala y una subred privada /24, por ejemplo `10.253.42.0`. ConsoleLAN comprueba interfaces y rutas conocidas para evitar solapamientos. No modifica IP, rutas, router, NAT ni crea un puente Windows.
-3. Pulse **Crear sala**. Los demás eligen su VPN y pulsan **Buscar salas**. Se presentan hasta cinco resultados recientes, sin establecer un límite mundial de salas.
+1. Elija **VPN de los PC** por nombre e IPv4. No elija la Ethernet doméstica como VPN. Los adaptadores desconectados aparecen para diagnóstico, pero no sirven para iniciar.
+2. En el anfitrión, elija **Crear una sala**, escriba el nombre y, en **Opciones avanzadas**, una subred privada /24, por ejemplo `10.253.42.0`. ConsoleLAN comprueba interfaces y rutas conocidas para evitar solapamientos. No modifica IP, rutas, router, NAT ni crea un puente Windows.
+3. Pulse **Crear sala**. Los demás eligen su VPN, **Unirme a una sala** y **Buscar salas en mi VPN**. Se presentan hasta cinco resultados recientes, sin establecer un límite mundial de salas.
 4. Haga doble clic en un resultado o escriba la IPv4 VPN del anfitrión y pulse **Conectar / reconectar**. Las VPN que no transportan broadcast, como muchas configuraciones WireGuard, requieren conexión directa. Puerto normal: 32190; se acepta `IP:puerto` para diagnóstico.
 5. Revise nombre de sala, maestro y participantes. Un PC participa en una sala a la vez. El instalador puede autorizar el firewall exclusivamente para la aplicación y la interfaz VPN elegida, con consentimiento explícito.
 
@@ -36,7 +40,7 @@ Pulse **Añadir consola**, escriba un nombre y seleccione la fila. Puede recorda
 
 En la consola elija Ethernet, configuración manual y la IP/máscara mostradas. Deje gateway y DNS sin configurar o en `0.0.0.0` si su sistema lo admite. ConsoleLAN no proporciona DNS ni salida a Internet. No hay un servidor oculto en `.1` y no se debe copiar el DNS doméstico esperando que funcione a través del túnel.
 
-Algunas consolas obligan a escribir valores de gateway/DNS antes de guardar. Cuando admitan una configuración LAN sin servicios, puede usar la IP propia de la consola como gateway y DNS **solo como marcador de configuración**, sabiendo que no hay servicio en esas direcciones y que la prueba de Internet fallará. Eso no aporta Internet, DNS ni garantía de que el firmware conserve la configuración. Si la consola no permite continuar hacia el modo LAN sin validar esos servicios, esa combinación de firmware/juego requiere una solución de red adicional fuera de ConsoleLAN 1.1; no se muestra como compatible sin probarla.
+Algunas consolas obligan a escribir valores de gateway/DNS antes de guardar. Cuando admitan una configuración LAN sin servicios, puede usar la IP propia de la consola como gateway y DNS **solo como marcador de configuración**, sabiendo que no hay servicio en esas direcciones y que la prueba de Internet fallará. Eso no aporta Internet, DNS ni garantía de que el firmware conserve la configuración. Si la consola no permite continuar hacia el modo LAN sin validar esos servicios, esa combinación de firmware/juego requiere una solución de red adicional fuera de ConsoleLAN 1.2.0; no se muestra como compatible sin probarla.
 
 La prueba de Internet puede fallar con la LAN por cable disponible. Entre en el modo LAN/System Link del juego; no en sus modos PSN/online. Los requisitos de cada juego (versiones, contenidos, límites de latencia y modo LAN) se validan por separado.
 
@@ -66,10 +70,24 @@ TX cuenta tramas locales admitidas para el túnel; RX, tramas remotas admitidas 
 
 El presupuesto UDP predeterminado es 1100 bytes, incluida la cabecera propia. Puede reducirlo a 512 para VPN con MTU pequeña. Cambie el valor antes de iniciar o buscar; el siguiente comando enviado al motor lo aplica. El tráfico de juego no se retransmite.
 
-En **Diagnóstico y registros** puede abrir los datos, consultar Npcap y capturas, y exportar un informe con el estado y el registro. Contiene IP, nombres, MAC e identificadores; no se graba el contenido de las tramas. Los registros rotan alrededor de 2 MiB y conservan el anterior.
+En **Diagnóstico** puede abrir los datos, consultar Npcap y capturas, y exportar un informe con el estado y el registro. Contiene IP, nombres, MAC e identificadores; no se graba el contenido de las tramas. Los registros rotan alrededor de 2 MiB y conservan el anterior.
 
 ## Aislamiento
 
 Los mensajes de sala y sesión y los endpoints se verifican en el túnel. Un unicast local conocido se queda en el switch; uno remoto conocido solo se entrega a su sede. Broadcast, multicast y ARP se distribuyen a las sedes de la sala con consolas. El unicast desconocido está limitado a 200 tramas/s por origen.
 
 El filtro del túnel no aísla puertos del switch: dos consolas de la misma LAN física pueden verse directamente aunque sus PC hayan creado salas diferentes. Las balizas locales detectan otros puentes ConsoleLAN y bloquean la interfaz afectada mientras se sigan viendo, pero no sustituyen el requisito de un único PC por LAN.
+
+## Acceso del PC a sus consolas (1.2)
+
+Este acceso es opcional, está desactivado al arrancar y funciona mientras la sala está activa. Primero añada la consola y espere a que tenga IP, MAC y Ethernet detectadas. Después pulse **Activar acceso local** en **Acceso desde este PC** y acepte el aviso de administrador de Windows para `ConsoleLAN.Access.exe`.
+
+La aplicación crea **ConsoleLAN Local**, un adaptador Wintun con la dirección `.1` de la subred de la sala y rutas `/32` únicamente a las consolas locales detectadas. `.1` ya estaba excluida de las reservas de consola: no es un router ni un DNS. No cambia las direcciones, DHCP, DNS o puerta de enlace de la Ethernet ni de la VPN. Antes de activarse comprueba solapamientos y busca conflictos de `.1` mediante ARP.
+
+Cuando aparezca **Acceso local activo**, abra su cliente FTP y use la IP reservada de la consola y el puerto de su servidor FTP. El servidor FTP debe estar activo en la consola. Se recomienda modo pasivo; el acceso no abre puertos de firewall para servidores del PC. El tráfico de juego puede continuar por ConsoleLAN. Esta función no permite acceder a consolas de otras casas.
+
+**Desactivar acceso local**, salir de la sala o cerrar ConsoleLAN retira las rutas y el adaptador propios. El proceso auxiliar también se detiene si pierde a su proceso principal, el canal de control o sus latidos. Espere a que desaparezca el adaptador antes de cambiar de subred o crear otra sala. No se desinstala el controlador Wintun compartido: otras aplicaciones pueden utilizarlo.
+
+Si Windows cancela o deniega la elevación, el acceso queda desactivado y la sala continúa funcionando. Si la consola pierde la IP/MAC/Ethernet válida, el acceso se detiene. Tras corregir el problema, puede activarlo de nuevo. El acceso solo es IPv4; no instala puentes Windows, NAT ni una ruta por defecto.
+
+La prueba automatizada de 1.2 utiliza el controlador firmado y TCP de Windows para una transferencia FTP pasiva contra una consola simulada. No sustituye la prueba con el servidor FTP de su PS5 ni certifica una partida entre consolas.

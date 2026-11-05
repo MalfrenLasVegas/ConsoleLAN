@@ -13,6 +13,11 @@ $sdkFile = Fetch-Verified 'https://npcap.com/dist/npcap-sdk-1.17.zip' 'npcap-sdk
 if (-not (Test-Path -LiteralPath (Join-Path $dependencyPath 'npcap-sdk-1.17\Include\pcap.h'))) {
     Expand-Archive -LiteralPath $sdkFile -DestinationPath (Join-Path $dependencyPath 'npcap-sdk-1.17')
 }
+$wintunZip = Fetch-Verified 'https://www.wintun.net/builds/wintun-0.14.1.zip' 'wintun-0.14.1.zip' '07C256185D6EE3652E09FA55C0B673E2624B565E02C4B9091C79CA7D2F24EF51'
+if (-not (Test-Path -LiteralPath (Join-Path $dependencyPath 'wintun-0.14.1\wintun\include\wintun.h'))) {
+    Expand-Archive -LiteralPath $wintunZip -DestinationPath (Join-Path $dependencyPath 'wintun-0.14.1')
+}
+if ((Get-AuthenticodeSignature -LiteralPath (Join-Path $dependencyPath 'wintun-0.14.1\wintun\bin\amd64\wintun.dll')).Status -ne 'Valid') { throw 'Firma de Wintun inválida.' }
 if ($Packaging) {
     Fetch-Verified 'https://download.qt.io/archive/qt/6.12/6.12.0/submodules/qtbase-everywhere-src-6.12.0.tar.xz' 'qtbase-everywhere-src-6.12.0.tar.xz' 'A951BD163C7B80FC6B8C88D7668FB56ABF91C152373E13C10666763238131307' | Out-Null
     Fetch-Verified 'https://raw.githubusercontent.com/microsoft/DirectXShaderCompiler/main/LICENSE.TXT' 'DirectXShaderCompiler-LICENSE.txt' '' | Out-Null

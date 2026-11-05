@@ -1,5 +1,6 @@
 #include "window.hpp"
 #include <QtTest>
+#include <QScopeGuard>
 
 using namespace cl;
 class UiTests : public QObject {
@@ -16,6 +17,7 @@ class UiTests : public QObject {
         auto reservation = console;
         reservation["active"] = true;
         return {{"mode", "client"},
+                {"subnet", "10.253.42.0"},
                 {"status", "Conectado al maestro · conectividad de consolas pendiente de prueba"},
                 {"owner", "owner-123"},
                 {"master", "10.147.0.8:32190"},
@@ -47,7 +49,7 @@ class UiTests : public QObject {
         settings.setValue("appearance/language", "es");
         settings.setValue("appearance/theme", "light");
         presentation().loadPreferences();
-        QCoreApplication::processEvents();
+        QTest::qWait(100);
     }
     void switchLanguageDuringSession() {
         Window window(preferences_.path(), false);
@@ -70,7 +72,7 @@ class UiTests : public QObject {
         QCOMPARE(consoles->item(0, 0)->text(), QString("Crear sala")); // A user-defined name, not UI text.
         QCOMPARE(consoles->item(0, 1)->text(), QString("This PC"));
         QCOMPARE(consoles->horizontalHeaderItem(2)->text(), QString("Reserved IP"));
-        QVERIFY(consoles->item(0, 5)->text().startsWith("Traffic observed"));
+        QVERIFY(consoles->item(0, 5)->text().startsWith("Activity detected"));
         QVERIFY(!consoles->selectionModel()->selectedRows().isEmpty());
         QVERIFY(status->text().startsWith("Connected to host"));
         QVERIFY(diagnostics->toPlainText().contains("Observed Ethernet packets"));
@@ -137,6 +139,71 @@ class UiTests : public QObject {
                  QString("Traffic observed · connectivity unverified"));
         QCOMPARE(message("native driver message"), QString("native driver message"));
     }
+    void copyFeedbackAndPendingGuidance() {
+        // Restore every clipboard format after exercising the existing copy action.
+        auto clipboard = QApplication::clipboard();
+        auto saved = new QMimeData;
+        if (const auto current = clipboard->mimeData())
+            for (const auto &format : current->formats())
+                saved->setData(format, current->data(format));
+        auto restore = qScopeGuard([saved, clipboard] { clipboard->setMimeData(saved); });
+        Window window(preferences_.path(), false);
+        present(window);
+        auto copy = window.findChild<QPushButton *>("copyConfiguration");
+        QVERIFY(copy->isEnabled());
+        copy->click();
+        QCOMPARE(copy->text(), QString("Copiado"));
+        const auto copied = clipboard->text();
+        QVERIFY(copied.contains("10.253.42.2"));
+        QVERIFY(copied.contains("255.255.255.0"));
+        present(window); // Status refreshes must not remove the feedback.
+        QCOMPARE(copy->text(), QString("Copiado"));
+        presentation().setLanguage("en");
+        QTRY_COMPARE(copy->text(), QString("Copied"));
+        QCOMPARE(clipboard->text(), copied); // Language changes only affect presentation.
+        QTRY_COMPARE(copy->text(), QString("Copy settings"));
+        auto pending = fixture();
+        pending["consoles"] = QJsonArray{};
+        QVERIFY(QMetaObject::invokeMethod(&window, "updateView", Qt::DirectConnection,
+                                          Q_ARG(QJsonObject, pending)));
+        QVERIFY(!copy->isEnabled());
+        QVERIFY(window.findChild<QLabel *>("nextStep")->text().startsWith("Wait for"));
+        QVERIFY(window.findChild<QLabel *>("consoleConfigurationHelp")->text().startsWith("Waiting for"));
+    }
+    void localAccessPresentation() {
+        Window window(preferences_.path(), false);
+        auto toggle = window.findChild<QPushButton *>("localAccessToggle");
+        auto label = window.findChild<QLabel *>("localAccessStatus");
+        QVERIFY(toggle && label);
+        QVERIFY(!toggle->isEnabled());
+        auto view = fixture();
+        QVERIFY(
+            QMetaObject::invokeMethod(&window, "updateView", Qt::DirectConnection, Q_ARG(QJsonObject, view)));
+        QVERIFY(toggle->isEnabled());
+        QCOMPARE(toggle->text(), QString("Activar acceso local"));
+        view["localAccess"] = QJsonObject{{"state", "active"}, {"requested", true}, {"pcIp", "10.253.42.1"}};
+        QVERIFY(
+            QMetaObject::invokeMethod(&window, "updateView", Qt::DirectConnection, Q_ARG(QJsonObject, view)));
+        QCOMPARE(toggle->text(), QString("Desactivar acceso local"));
+        QVERIFY(label->text().contains("10.253.42.1"));
+        presentation().setLanguage("en");
+        QTRY_COMPARE(toggle->text(), QString("Disable local access"));
+        QVERIFY(label->text().startsWith("Local access enabled"));
+        view["localAccess"] = QJsonObject{
+            {"state", "error"},
+            {"requested", false},
+            {"error", "Se canceló el permiso de administrador. No se ha activado el acceso local."}};
+        QVERIFY(
+            QMetaObject::invokeMethod(&window, "updateView", Qt::DirectConnection, Q_ARG(QJsonObject, view)));
+        QVERIFY(label->text().contains("permission was cancelled"));
+        auto remote = view["consoles"].toArray()[0].toObject();
+        remote["owner"] = "remote-owner";
+        view["consoles"] = QJsonArray{remote};
+        view["localAccess"] = QJsonObject{};
+        QVERIFY(
+            QMetaObject::invokeMethod(&window, "updateView", Qt::DirectConnection, Q_ARG(QJsonObject, view)));
+        QVERIFY(!toggle->isEnabled());
+    }
     void renderLanguageThemeMatrix() {
         for (const auto &language : {QString("es"), QString("en")}) {
             for (const auto &theme : {QString("light"), QString("dark")}) {
@@ -145,7 +212,7 @@ class UiTests : public QObject {
                 Window window(preferences_.path(), false);
                 window.show();
                 QVERIFY(QTest::qWaitForWindowExposed(&window));
-                QCoreApplication::processEvents();
+                QTest::qWait(100);
                 // Documentation previews use a synthetic adapter label, never the user's VPN IDs/IPs.
                 auto vpn = window.findChild<QComboBox *>("vpnSelector");
                 vpn->clear();
@@ -159,6 +226,122 @@ class UiTests : public QObject {
                 QVERIFY(window.grab().save("preview-" + theme + "-" + language + ".png"));
             }
         }
+    }
+    void guidedFlowAndContextualControls() {
+        Window window(preferences_.path(), false);
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+        auto panels = window.findChild<QStackedWidget *>("consolePanels");
+        auto forms = window.findChild<QStackedWidget *>("roomPanels");
+        QVERIFY(panels && forms);
+        QCOMPARE(panels->currentIndex(), 0);
+        QVERIFY(!window.findChild<QTableWidget *>("consolesTable")->isVisible());
+        auto advanced = window.findChild<QToolButton *>("advancedToggle");
+        QVERIFY(advanced);
+        QVERIFY(!window.findChild<QWidget *>("advancedOptions")->isVisible());
+        QTest::mouseClick(advanced, Qt::LeftButton);
+        QVERIFY(window.findChild<QWidget *>("advancedOptions")->isVisible());
+        QTest::mouseClick(window.findChild<QPushButton *>("joinMode"), Qt::LeftButton);
+        QVERIFY(window.findChild<QLineEdit *>("hostAddress")->isVisible());
+        QJsonObject joining{{"mode", "joining"}, {"status", "Conectando…"}};
+        QVERIFY(QMetaObject::invokeMethod(&window, "updateView", Qt::DirectConnection,
+                                          Q_ARG(QJsonObject, joining)));
+        QVERIFY(window.findChild<QPushButton *>("leaveRoom")->isVisible());
+        QVERIFY(window.findChild<QPushButton *>("leaveRoom")->isEnabled());
+        present(window);
+        QCOMPARE(forms->currentIndex(), 1);
+        QCOMPARE(panels->currentIndex(), 1);
+        auto consoles = window.findChild<QTableWidget *>("consolesTable");
+        consoles->selectRow(0);
+        QVERIFY(window.findChild<QPushButton *>("copyConfiguration")->isEnabled());
+        QVERIFY(window.findChild<QPushButton *>("manageConsole")->isEnabled());
+        auto snapshot = fixture();
+        auto list = snapshot["consoles"].toArray();
+        auto remote = list[0].toObject();
+        remote["owner"] = "remote-site";
+        list[0] = remote;
+        snapshot["consoles"] = list;
+        snapshot["remembered"] = QJsonArray{};
+        QVERIFY(QMetaObject::invokeMethod(&window, "updateView", Qt::DirectConnection,
+                                          Q_ARG(QJsonObject, snapshot)));
+        consoles->selectRow(0);
+        QVERIFY(!window.findChild<QPushButton *>("manageConsole")->isEnabled());
+    }
+    void renderConnectedAndCompactLayouts() {
+        presentation().setTheme("dark");
+        presentation().setLanguage("es");
+        Window window(preferences_.path(), false);
+        auto snapshot = fixture();
+        snapshot["name"] = "Viernes LAN";
+        auto list = snapshot["consoles"].toArray();
+        auto console = list[0].toObject();
+        console["name"] = "Consola del salón";
+        list[0] = console;
+        snapshot["consoles"] = list;
+        snapshot["remembered"] = list;
+        QVERIFY(QMetaObject::invokeMethod(&window, "updateView", Qt::DirectConnection,
+                                          Q_ARG(QJsonObject, snapshot)));
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+        auto vpn = window.findChild<QComboBox *>("vpnSelector");
+        vpn->clear();
+        vpn->addItem("VPN de ejemplo · 10.147.0.2", "example|10.147.0.2");
+        window.findChild<QTableWidget *>("consolesTable")->selectRow(0);
+        QTest::qWait(100);
+        auto step = window.findChild<QWidget *>("consoleStepHeading");
+        QVERIFY(step && step->isVisible());
+        QCOMPARE(step->height(), 30);
+        QVERIFY(window.grab().save("preview-session-dark-es.png"));
+        window.resize(1000, 760);
+        QTest::qWait(100);
+        auto scroll = window.findChild<QScrollArea *>("playScroll");
+        QVERIFY(scroll);
+        QTRY_COMPARE(scroll->horizontalScrollBar()->maximum(), 0);
+        QVERIFY(window.grab().save("preview-compact-dark-es.png"));
+        scroll->verticalScrollBar()->setValue(scroll->verticalScrollBar()->maximum());
+        QTest::qWait(100);
+        QVERIFY(window.grab().save("preview-compact-console-dark-es.png"));
+        auto accessView = snapshot;
+        accessView["localAccess"] =
+            QJsonObject{{"state", "active"}, {"requested", true}, {"pcIp", "10.253.42.1"}};
+        QVERIFY(QMetaObject::invokeMethod(&window, "updateView", Qt::DirectConnection,
+                                          Q_ARG(QJsonObject, accessView)));
+        QTest::qWait(100);
+        scroll->verticalScrollBar()->setValue(scroll->verticalScrollBar()->maximum());
+        QVERIFY(window.grab().save("preview-local-access-dark-es.png"));
+        auto details = window.findChild<QFrame *>("consoleDetails");
+        QVERIFY(details->isVisible());
+        QVERIFY(window.findChild<QLabel *>("consoleIpAddress")->text() == "10.253.42.2");
+        scroll->verticalScrollBar()->setValue(0);
+        window.resize(1280, 920);
+        auto language = window.findChild<QComboBox *>("languageSelector");
+        auto theme = window.findChild<QComboBox *>("themeSelector");
+        language->setCurrentIndex(language->findData("en"));
+        theme->setCurrentIndex(theme->findData("light"));
+        QTest::qWait(100);
+        vpn->clear();
+        vpn->addItem("Example VPN · 10.147.0.2", "example|10.147.0.2");
+        QVERIFY(window.grab().save("preview-session-light-en.png"));
+        language->setCurrentIndex(language->findData("es"));
+        theme->setCurrentIndex(theme->findData("dark"));
+        QTest::qWait(100);
+        vpn->clear();
+        vpn->addItem("VPN de ejemplo · 10.147.0.2", "example|10.147.0.2");
+        QTest::mouseClick(window.findChild<QPushButton *>("diagnosticsNav"), Qt::LeftButton);
+        QCOMPARE(window.findChild<QStackedWidget *>("mainPages")->currentIndex(), 1);
+        QTest::qWait(100);
+        QVERIFY(window.grab().save("preview-diagnostics-dark-es.png"));
+        QTest::mouseClick(window.findChild<QPushButton *>("reservationsNav"), Qt::LeftButton);
+        QCOMPARE(window.findChild<QStackedWidget *>("mainPages")->currentIndex(), 2);
+        QTest::qWait(100);
+        QVERIFY(window.grab().save("preview-reservations-dark-es.png"));
+        QTest::mouseClick(window.findChild<QPushButton *>("playNav"), Qt::LeftButton);
+        QJsonObject empty{{"mode", "offline"}, {"status", "Sin sala"}};
+        QVERIFY(QMetaObject::invokeMethod(&window, "updateView", Qt::DirectConnection,
+                                          Q_ARG(QJsonObject, empty)));
+        QTest::mouseClick(window.findChild<QPushButton *>("joinMode"), Qt::LeftButton);
+        QTest::qWait(100);
+        QVERIFY(window.grab().save("preview-join-dark-es.png"));
     }
 };
 QTEST_MAIN(UiTests)

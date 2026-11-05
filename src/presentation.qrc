@@ -1,1 +1,1 @@
-<RCC><qresource prefix="/i18n"><file alias="en.json">../i18n/en.json</file></qresource></RCC>
+<RCC><qresource prefix="/i18n"><file alias="en.json">../i18n/en.json</file></qresource><qresource prefix="/icons"><file alias="chevron.png">icons/chevron.png</file></qresource></RCC>

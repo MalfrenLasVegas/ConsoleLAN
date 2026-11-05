@@ -19,13 +19,15 @@ if (Test-Path -LiteralPath $bundlePath) {
     Remove-Item -LiteralPath $resolvedBundle -Recurse -Force
 }
 New-Item -ItemType Directory -Force -Path $bundlePath | Out-Null
-Copy-Item -LiteralPath (Join-Path $buildPath 'ConsoleLAN.exe') -Destination $bundlePath
+Copy-Item -LiteralPath (Join-Path $buildPath 'ConsoleLAN.exe'),(Join-Path $buildPath 'ConsoleLAN.Access.exe'),(Join-Path $buildPath 'wintun.dll') -Destination $bundlePath
+if ((Get-AuthenticodeSignature -LiteralPath (Join-Path $bundlePath 'wintun.dll')).Status -ne 'Valid') { throw 'Firma de Wintun inválida.' }
 & (Join-Path $QtRoot 'bin\windeployqt.exe') --release --no-compiler-runtime --no-translations --no-opengl-sw --skip-plugin-types 'iconengines,imageformats,tls,networkinformation' --dir $bundlePath (Join-Path $bundlePath 'ConsoleLAN.exe')
 if ($LASTEXITCODE -ne 0) { throw 'windeployqt falló.' }
 Copy-Item -LiteralPath (Join-Path $workspacePath 'docs') -Destination $bundlePath -Recurse
 Copy-Item -LiteralPath (Join-Path $workspacePath 'LICENSE'),(Join-Path $workspacePath 'README.md'),(Join-Path $workspacePath 'README.en.md') -Destination $bundlePath
 New-Item -ItemType Directory -Force -Path (Join-Path $bundlePath 'scripts'),(Join-Path $bundlePath 'licenses\sources') | Out-Null
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'firewall.ps1') -Destination (Join-Path $bundlePath 'scripts')
+Copy-Item -LiteralPath (Join-Path $workspacePath 'deps\wintun-0.14.1\wintun\LICENSE.txt') -Destination (Join-Path $bundlePath 'licenses\Wintun-LICENSE.txt')
 Copy-Item -LiteralPath $qtSource -Destination (Join-Path $bundlePath 'licenses\sources')
 Copy-Item -LiteralPath (Join-Path $workspacePath 'docs\DEPENDENCIAS.md') -Destination (Join-Path $bundlePath 'licenses\THIRD-PARTY.md')
 Copy-Item -LiteralPath (Join-Path $workspacePath 'deps\DirectXShaderCompiler-LICENSE.txt') -Destination (Join-Path $bundlePath 'licenses')

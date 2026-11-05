@@ -1,12 +1,16 @@
-# ConsoleLAN 1.1 manual
+# ConsoleLAN 1.2.0 manual
 
 ## Language and appearance
 
-Use **Language** in the top right to choose **English** or **Español**, and **Theme** to choose **Light** or **Dark**. Both changes take effect immediately, including room/console labels, statuses, diagnostics and the built-in manual. You do not need to restart or leave the room. Your room name, console names, IP reservations and selected interfaces remain unchanged.
+Use **Language** at the bottom of the sidebar to choose **English** or **Español**, and **Theme** to choose **Light** or **Dark**. Both changes take effect immediately, including room/console labels, statuses, diagnostics and the built-in manual. You do not need to restart or leave the room. Your room name, console names, IP reservations and selected interfaces remain unchanged.
 
 Both preferences are saved immediately for your Windows user and restored next time. On the first start, the application uses Spanish on a Spanish-language Windows installation and English otherwise; the initial theme is Light. Upgrading from 1.0 keeps your saved consoles, reservations and other settings.
 
 The dark theme covers the main window, tables, inputs, selection, disabled controls, diagnostic/log panels and Qt dialogs. The title bar is also adapted on supported Windows versions. Driver/Windows error details and user-defined adapter/console names retain their original language. Log files retain their original records; the viewer and exported human-readable messages use your selected language.
+
+## Navigation
+
+**Play over LAN** contains three steps: connection, room and consoles. **Diagnostics** holds logs and support tools; **Reservations** shows host-managed addresses. Subnet and UDP budget settings are collapsed under **Advanced options**. Select a console to view and copy its IP configuration; **Manage** groups Ethernet, MAC and removal actions.
 
 ## Prepare each site
 
@@ -18,9 +22,9 @@ Your hardware must allow the relevant Ethernet frames to be captured and injecte
 
 ## Create or join a room
 
-1. Select **VPN · UDP transport**, checking its name and IPv4 address. Do not choose the domestic Ethernet as the VPN. Disconnected adapters are listed for diagnosis but cannot start a session.
-2. On the host, choose a room name and private /24 subnet, such as `10.253.42.0`. The app checks known interfaces and routes for overlaps. A joining PC also checks the room subnet against its local networks. ConsoleLAN does not change PC IPs, routes, NAT or Windows bridges.
-3. Click **Create room**. Other PCs select their VPN and use **Find rooms**, then double-click an advertisement. Up to five recent advertisements are displayed, without imposing a global limit on independent hosts.
+1. Select **PC VPN**, checking its name and IPv4 address. Do not choose the domestic Ethernet as the VPN. Disconnected adapters are listed for diagnosis but cannot start a session.
+2. On the host, choose **Create a room**, enter a name and, under **Advanced options**, a private /24 subnet, such as `10.253.42.0`. The app checks known interfaces and routes for overlaps. A joining PC also checks the room subnet against its local networks. ConsoleLAN does not change PC IPs, routes, NAT or Windows bridges.
+3. Click **Create room**. Other PCs select their VPN and choose **Join a room** and **Find rooms on my VPN**, then double-click an advertisement. Up to five recent advertisements are displayed, without imposing a global limit on independent hosts.
 4. If discovery is unavailable, enter the host's **VPN IPv4 address** and choose **Connect / reconnect**. Direct connection works with VPNs that do not carry broadcast, including many WireGuard configurations. The standard transport port is UDP 32190; discovery uses UDP 32189. The address field accepts `IP:port` for diagnosis.
 5. Check the room, host and member list. Each PC joins one room at a time. The host coordinates reservations and relays client traffic; there is no central server or automatic host migration.
 
@@ -75,3 +79,17 @@ The tunnel validates room, session, endpoint and registered source ownership. Kn
 Ethernet without VLAN, ARP and IPv4 are supported up to 1514 bytes per frame. IPv6, VLAN, jumbo frames and other EtherTypes are not tunneled. DHCP is blocked. Non-initial IPv4 UDP fragments require an observed non-DHCP first fragment; orphan fragments are discarded.
 
 The tunnel cannot isolate physical switch ports: consoles on the same switch may see each other even when their PCs use different rooms. Local duplicate-bridge beacons provide an auxiliary warning, not switch isolation. Validate a real two-PC setup using [the acceptance checklist](ACEPTACION.md). The original 1.0 [technical report](INFORME.md) and [1.1 update report](INFORME-1.1.md) distinguish simulated/software checks from hardware acceptance.
+
+## Access from the PC to its local consoles (1.2)
+
+This optional feature starts disabled and requires an active room. Add a console and wait for its reserved IP, MAC and Ethernet adapter to be detected. Under **Access from this PC**, click **Enable local access** and approve the Windows administrator prompt for `ConsoleLAN.Access.exe`.
+
+ConsoleLAN creates its own **ConsoleLAN Local** Wintun adapter. It uses the room subnet's reserved `.1` address with `/32` routes only to detected local consoles. `.1` is excluded from console reservations; it is not a gateway or DNS server. Existing Ethernet/VPN addresses, DHCP, DNS and gateways are not changed. Overlapping networks and ARP conflicts on `.1` prevent activation.
+
+Once local access is enabled, connect your FTP client to your console's reserved IP and its FTP server port. The console must already be running an FTP server. Passive FTP is recommended; this feature does not open firewall ports for servers on your PC. LAN gaming can continue at the same time. Consoles in other homes are not accessible through this feature.
+
+Disabling local access, leaving the room or closing ConsoleLAN removes its own host routes and adapter. The helper also stops if its parent process dies, the control pipe disconnects or heartbeats stop. Wait for the adapter to disappear before changing the room subnet. The shared Wintun driver is not uninstalled, since other applications may use it.
+
+Cancelling or denying administrator permission leaves local access disabled without stopping the room. Loss of a valid local IP/MAC/Ethernet target stops local access; enable it again after resolving the issue. This is IPv4-only and creates no Windows bridges, NAT or default route.
+
+The automated 1.2 test uses the signed driver and real Windows TCP for passive FTP against a simulated console. This does not certify a physical PS5 FTP server or a real console gameplay session.

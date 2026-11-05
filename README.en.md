@@ -1,35 +1,33 @@
-# ConsoleLAN 1.1
+# ConsoleLAN 1.2.0
 
 [Español](README.md) · English
 
 Windows x64 application in C++20, Qt 6 Widgets, Winsock and Npcap for selectively extending console LAN traffic over an existing VPN. Each room's host coordinates IP reservations and relays UDP traffic. No accounts or central server are required.
 
-## New in 1.1
+## New in 1.2
 
-- **Light and Dark themes**, including tables, inputs, disabled states and dialogs.
-- **English and Spanish**, switchable while the app is running.
-- Both preferences are saved immediately; switching does not leave the room or change console names, IPs or reservations.
-- Built-in manual in both languages, translated diagnostics and displayed logs, and an English/Spanish installer.
-- Fixes a possible crash while refreshing session tables.
+- **Optional access from this PC to its local consoles**, using a dedicated signed Wintun adapter for FTP or other services while LAN gaming continues.
+- Only host routes to this PC's consoles. Existing Ethernet/VPN settings, DHCP, DNS and gateways remain unchanged. No NAT or access to consoles in other homes through this feature.
+- A separate elevated helper owns and removes the adapter and routes. The main app can remain unprivileged. Cancelling permission leaves access disabled.
+- Cleanup on disable, room exit, app closure, lost control channel, missing heartbeats or parent-process death.
+- Guided UI with clearer text, separate IP fields, copy feedback, Light/Dark themes and English/Spanish.
 
 ## Downloads
 
-- [Windows x64 installer](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.1.0/ConsoleLAN-1.1.0-win64-setup.exe)
-- [Portable package with Qt](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.1.0/ConsoleLAN-1.1.0-win64-portable.zip)
-- [Full source and illustrated documentation](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.1.0/ConsoleLAN-1.1.0-source.zip)
-- [SHA256 checksums](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.1.0/SHA256SUMS.txt)
+- [Windows x64 installer](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.2.0/ConsoleLAN-1.2.0-win64-setup.exe)
+- [Portable package with Qt](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.2.0/ConsoleLAN-1.2.0-win64-portable.zip)
+- [Full source and illustrated documentation](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.2.0/ConsoleLAN-1.2.0-source.zip)
+- [SHA256 checksums](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.2.0/SHA256SUMS.txt)
 
-Read the [1.1.0 release notes](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/tag/v1.1.0). [Npcap](https://npcap.com/#download) must be installed separately. The portable package requires an up-to-date Microsoft Visual C++ Runtime x64. Qt Base sources and license notices are included in the binary packages.
+Read the [1.2.0 release notes](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/tag/v1.2.0). [Npcap](https://npcap.com/#download) must be installed separately. The portable package requires an up-to-date Microsoft Visual C++ Runtime x64. Qt Base sources and license notices are included in the binary packages.
 
 ## Interface
 
-The following are screenshots of the real 1.1 UI from isolated UI tests with an **example VPN adapter label**, not an actual connection or proof of console gameplay.
+![Optional local access in ConsoleLAN 1.2](docs/images/consolelan-1.2-local-access-dark-es.png)
 
-![ConsoleLAN 1.1, Dark theme and English](docs/images/consolelan-1.1-dark-en.png)
+![ConsoleLAN 1.2 in Light theme and English](docs/images/consolelan-1.2-light-en.png)
 
-![ConsoleLAN 1.1, Light theme and Spanish](docs/images/consolelan-1.1-light-es.png)
-
-Use **Theme** and **Language** in the top right. Changes apply immediately and persist for the next launch. See the [English manual](docs/MANUAL.en.md).
+Real UI rendered with synthetic data. These screenshots do not prove console gameplay. The native integration test uses signed Wintun and real Windows TCP against a simulated FTP console; physical PS5 FTP and console gameplay still require hardware acceptance. See the [manual](docs/MANUAL.en.md) and [implementation/validation report](docs/INFORME-1.2.0.md).
 
 ## Getting started
 

@@ -48,3 +48,7 @@ Los binarios de ConsoleLAN no están firmados con certificado de editor. El paqu
 ## Actualización 1.1
 
 La interfaz usa un catálogo propio `i18n/en.json` integrado mediante recursos Qt y QTranslator, sin archivos de traducción externos. Se mantienen las dependencias Qt Base de 1.0. Qt Test solo se utiliza al compilar/ejecutar las pruebas y no se incluye como requisito del ejecutable distribuido. Los temas usan Fusion/QPalette y la API DWM de Windows para la barra de título compatible. El instalador admite español e inglés.
+
+## Wintun 0.14.1 (acceso local opcional)
+
+Se redistribuye `wintun.dll` AMD64, sin modificaciones, del ZIP firmado oficial: https://www.wintun.net/builds/wintun-0.14.1.zip. SHA256 del ZIP: `07c256185d6ee3652e09fa55c0b673e2624b565e02c4b9091c79ca7d2f24ef51`. El script comprueba el hash y la firma Authenticode. La licencia de binarios está en `licenses/Wintun-LICENSE.txt`; permite su redistribución junto a software que usa únicamente la API permitida. El encabezado API tiene licencia dual GPL-2.0 o MIT; este proyecto usa la opción MIT. No se extrae ni modifica el controlador firmado. API/documentación: https://www.wintun.net/.
