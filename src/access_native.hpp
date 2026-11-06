@@ -13,6 +13,7 @@ class AccessAdapter {
     void close();
     std::optional<QByteArray> receive();
     bool send(const QByteArray &ip);
+    void *readEvent() const;
     quint32 index() const;
     quint64 loopGuardId() const;
 #ifdef CONSOLELAN_NATIVE_TESTS

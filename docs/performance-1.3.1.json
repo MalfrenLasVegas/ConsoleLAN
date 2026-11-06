@@ -1,0 +1,33 @@
+{
+  "version": "1.3.1",
+  "date": "2026-11-06",
+  "environment": "Windows 10 x64, Qt 6.12.0, signed Wintun 0.14.1",
+  "method": "real Windows TCP, disposable Wintun adapter, synthetic Ethernet console; legacy scheduler emulation and event-driven scheduler in the same test binary",
+  "physicalConsole": false,
+  "legacy": {
+    "binaryExact": true,
+    "bytesEachDirection": 33554432,
+    "downloadMBps": 12.009460272011452,
+    "idleWaits": 0,
+    "mode": "legacy-128-and-sleep",
+    "packets": 94599,
+    "physicalConsole": false,
+    "saturatedTurns": 411,
+    "state": "pass",
+    "turns": 428,
+    "uploadMBps": 8.837090334474585
+  },
+  "eventDriven": {
+    "binaryExact": true,
+    "bytesEachDirection": 33554432,
+    "downloadMBps": 145.8888347826087,
+    "idleWaits": 11698,
+    "mode": "event-driven",
+    "packets": 98463,
+    "physicalConsole": false,
+    "saturatedTurns": 81,
+    "state": "pass",
+    "turns": 11779,
+    "uploadMBps": 53.17659587955626
+  }
+}

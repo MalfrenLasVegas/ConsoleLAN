@@ -2,6 +2,7 @@
 #include "access_pipe.hpp"
 #include "capture.hpp"
 #include "internet.hpp"
+#include "access_pump.hpp"
 #include <iphlpapi.h>
 #include <netioapi.h>
 #include <fwpmu.h>
@@ -49,6 +50,7 @@ struct AccessAdapter::Impl {
     WINTUN_START_SESSION_FUNC *start = nullptr;
     WINTUN_END_SESSION_FUNC *end = nullptr;
     WINTUN_RECEIVE_PACKET_FUNC *receive = nullptr;
+    WINTUN_GET_READ_WAIT_EVENT_FUNC *readEvent = nullptr;
     WINTUN_RELEASE_RECEIVE_PACKET_FUNC *release = nullptr;
     WINTUN_ALLOCATE_SEND_PACKET_FUNC *allocate = nullptr;
     WINTUN_SEND_PACKET_FUNC *send = nullptr;
@@ -137,7 +139,8 @@ bool AccessAdapter::open(const AccessPlan &p, QString name) {
     WLOAD(end, WintunEndSession)
     WLOAD(receive, WintunReceivePacket)
     WLOAD(release, WintunReleaseReceivePacket)
-    WLOAD(allocate, WintunAllocateSendPacket) WLOAD(send, WintunSendPacket)
+    WLOAD(allocate, WintunAllocateSendPacket)
+    WLOAD(send, WintunSendPacket) WLOAD(readEvent, WintunGetReadWaitEvent)
 #undef WLOAD
         // Stable identity; never open, reconfigure or remove somebody else's adapter.
         GUID guid{0x3c25397a, 0x0c31, 0x4b99, {0xbf, 0x36, 0x43, 0xf5, 0x37, 0xc5, 0xb0, 0x55}};
@@ -213,6 +216,10 @@ bool AccessAdapter::open(const AccessPlan &p, QString name) {
     }
     return fail("No se pudo activar la IP del adaptador propio", ERROR_TIMEOUT);
 }
+void *AccessAdapter::readEvent() const {
+    auto &a = *impl_;
+    return a.session ? a.readEvent(a.session) : nullptr;
+}
 std::optional<QByteArray> AccessAdapter::receive() {
     auto &a = *impl_;
     DWORD length = 0;
@@ -262,6 +269,7 @@ int accessHelperMain(const QString &pipeName, quint32 parentPid) {
     QString internetError;
     std::optional<AccessPlan> current;
     std::map<QString, std::unique_ptr<Capture>> captures;
+    std::vector<HANDLE> packetEvents;
     bool broken = false;
     QString error;
     auto heard = clockMs();
@@ -280,6 +288,7 @@ int accessHelperMain(const QString &pipeName, quint32 parentPid) {
                 internetWanted = false;
                 internetError.clear();
                 tun.close();
+                packetEvents.clear();
                 captures.clear();
                 current.reset();
                 auto all = adapters();
@@ -301,8 +310,13 @@ int accessHelperMain(const QString &pipeName, quint32 parentPid) {
                     if (captures.contains(t.adapter))
                         continue;
                     auto cap = std::make_unique<Capture>();
-                    if (!cap->open(t.adapter)) {
+                    // Avoid recapturing our own bulk injections. This filter is
+                    // only for local access; the room keeps its existing filter.
+                    const auto filter = localAccessCaptureFilter(plan->pcIp());
+                    if (!cap->open(t.adapter, filter) || !cap->readEvent()) {
                         error = cap->error;
+                        if (error.isEmpty())
+                            error = "Npcap no ofrece un evento de lectura para el acceso local.";
                         break;
                     }
                     captures.emplace(t.adapter, std::move(cap));
@@ -350,6 +364,9 @@ int accessHelperMain(const QString &pipeName, quint32 parentPid) {
                 }
 #endif
                 current = *plan;
+                packetEvents.push_back(tun.readEvent());
+                for (const auto &[id, cap] : captures)
+                    packetEvents.push_back(cap->readEvent());
             }
             const bool requestedInternet = (*config)["internet"].toBool();
             if (requestedInternet != internetWanted) {
@@ -370,37 +387,41 @@ int accessHelperMain(const QString &pipeName, quint32 parentPid) {
         }
         if (broken)
             break;
+        bool saturated = false;
         if (current) {
-            for (int i = 0; i < 128; ++i) {
-                auto ip = tun.receive();
-                if (!ip)
-                    break;
-                auto frame = accessToEthernet(*current, *ip);
-                if (frame && captures.contains(frame->adapter)) {
-                    if (captures.at(frame->adapter)->inject(frame->bytes))
-                        ++sent;
-                    else
-                        error = captures.at(frame->adapter)->error;
-                } else
-                    ++filtered;
-            }
+            auto outgoing = drainAccessPackets([&] { return tun.receive(); },
+                                               [&](const QByteArray &ip) {
+                                                   auto frame = accessToEthernet(*current, ip);
+                                                   if (frame && captures.contains(frame->adapter)) {
+                                                       if (captures.at(frame->adapter)->inject(frame->bytes))
+                                                           ++sent;
+                                                       else {
+                                                           error = captures.at(frame->adapter)->error;
+                                                           return false;
+                                                       }
+                                                   } else
+                                                       ++filtered;
+                                                   return true;
+                                               });
+            saturated = outgoing.saturated;
             for (auto &[id, cap] : captures) {
-                for (int i = 0; i < 128; ++i) {
-                    auto b = cap->receive();
-                    if (!b)
-                        break;
-                    auto reply = accessFromEthernet(*current, id, *b);
-                    if (reply.conflict) {
-                        error = "Conflicto de IP en el acceso local. Se ha detenido el adaptador propio.";
-                        break;
-                    }
-                    if (internet.input(id, *b))
-                        continue;
-                    if (!reply.ethernet.isEmpty() && !cap->inject(reply.ethernet))
-                        error = cap->error;
-                    if (!reply.ip.isEmpty() && tun.send(reply.ip))
-                        ++received;
-                }
+                auto incoming = drainAccessPackets(
+                    [&] { return cap->receive(); },
+                    [&](const QByteArray &b) {
+                        auto reply = accessFromEthernet(*current, id, b);
+                        if (reply.conflict) {
+                            error = "Conflicto de IP en el acceso local. Se ha detenido el adaptador propio.";
+                            return false;
+                        }
+                        if (internet.input(id, b))
+                            return true;
+                        if (!reply.ethernet.isEmpty() && !cap->inject(reply.ethernet))
+                            error = cap->error;
+                        if (!reply.ip.isEmpty() && tun.send(reply.ip))
+                            ++received;
+                        return error.isEmpty();
+                    });
+                saturated = saturated || incoming.saturated;
                 if (!cap->error.isEmpty())
                     error = cap->error;
             }
@@ -431,7 +452,16 @@ int accessHelperMain(const QString &pipeName, quint32 parentPid) {
                 break;
             reported = clockMs();
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+        if (!saturated) {
+            // Preserve Internet socket polling deadlines. Local packet events
+            // wake immediately, independently of Windows timer resolution.
+            const auto wake = waitForAccessActivity(parent, packetEvents, internet.active() ? 2 : 20);
+            if (wake == WAIT_FAILED) {
+                error = QString("No se pudo esperar al tráfico del acceso local (Windows %1).")
+                            .arg(GetLastError());
+                break;
+            }
+        }
     }
     internet.close();
     tun.close();

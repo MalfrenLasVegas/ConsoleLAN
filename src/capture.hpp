@@ -9,9 +9,10 @@ class Capture {
     QString adapter, error;
     Capture();
     ~Capture();
-    bool open(QString adapter);
+    bool open(QString adapter, const QString &filter = {});
     std::optional<QByteArray> receive();
     bool inject(const QByteArray &b);
+    void *readEvent() const;
     static QString version();
 };
 QByteArray bridgeBeacon(Id node);

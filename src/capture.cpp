@@ -22,6 +22,7 @@ struct Api {
     decltype(&pcap_freecode) freecode = nullptr;
     decltype(&pcap_geterr) geterr = nullptr;
     decltype(&pcap_lib_version) version = nullptr;
+    decltype(&pcap_getevent) event = nullptr;
     Api() {
         wchar_t dir[MAX_PATH];
         GetSystemDirectoryW(dir, MAX_PATH);
@@ -44,10 +45,11 @@ struct Api {
         LOAD(snaplen, pcap_set_snaplen)
         LOAD(promisc, pcap_set_promisc)
         LOAD(timeout, pcap_set_timeout)
-        LOAD(immediate, pcap_set_immediate_mode) LOAD(nonblock, pcap_setnonblock) LOAD(next, pcap_next_ex)
-            LOAD(send, pcap_sendpacket) LOAD(close, pcap_close) LOAD(datalink, pcap_datalink)
-                LOAD(compile, pcap_compile) LOAD(filter, pcap_setfilter) LOAD(freecode, pcap_freecode)
-                    LOAD(geterr, pcap_geterr) LOAD(version, pcap_lib_version)
+        LOAD(immediate, pcap_set_immediate_mode)
+        LOAD(nonblock, pcap_setnonblock) LOAD(next, pcap_next_ex) LOAD(send, pcap_sendpacket)
+            LOAD(close, pcap_close) LOAD(datalink, pcap_datalink) LOAD(compile, pcap_compile)
+                LOAD(filter, pcap_setfilter) LOAD(freecode, pcap_freecode) LOAD(geterr, pcap_geterr)
+                    LOAD(version, pcap_lib_version) LOAD(event, pcap_getevent)
 #undef LOAD
     }
     ~Api() {
@@ -72,7 +74,7 @@ QString Capture::version() {
     auto &a = api();
     return a.error.isEmpty() ? QString::fromLatin1(a.version()) : a.error;
 }
-bool Capture::open(QString id) {
+bool Capture::open(QString id, const QString &expression) {
     auto &a = api();
     if (!a.error.isEmpty()) {
         error = a.error;
@@ -104,7 +106,9 @@ bool Capture::open(QString id) {
         return false;
     }
     bpf_program filter{};
-    if (a.compile(p, &filter, "arp or ip or ether proto 0x88b5", 1, PCAP_NETMASK_UNKNOWN) < 0) {
+    const auto filterText =
+        expression.isEmpty() ? QByteArray("arp or ip or ether proto 0x88b5") : expression.toLatin1();
+    if (a.compile(p, &filter, filterText.constData(), 1, PCAP_NETMASK_UNKNOWN) < 0) {
         error = QString::fromLocal8Bit(a.geterr(p));
         return false;
     }
@@ -128,6 +132,9 @@ std::optional<QByteArray> Capture::receive() {
     if (n < 0)
         error = QString::fromLocal8Bit(api().geterr(impl_->p));
     return {};
+}
+void *Capture::readEvent() const {
+    return impl_->p ? api().event(impl_->p) : nullptr;
 }
 bool Capture::inject(const QByteArray &b) {
     if (api().send(impl_->p, reinterpret_cast<const u_char *>(b.constData()), int(b.size()))) {

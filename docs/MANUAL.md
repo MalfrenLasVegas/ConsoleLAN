@@ -1,4 +1,4 @@
-# Manual de ConsoleLAN 1.3.0
+# Manual de ConsoleLAN 1.3.1
 
 [English manual](MANUAL.en.md)
 

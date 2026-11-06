@@ -7,6 +7,8 @@
 #include <future>
 #include <iostream>
 #include <stdexcept>
+#include <atomic>
+#include <thread>
 using namespace cl;
 static void check(bool b, const char *s) {
     if (!b)
@@ -506,9 +508,39 @@ int main(int argc, char **argv) {
               "test adapter removed on close");
         {
             HelperPeer helper;
+            // Real Windows UDP keeps the helper's Wintun transmit queue busy.
+            // Its test-only synthetic Ethernet target discards these frames:
+            // no physical NIC, VPN or console receives the traffic.
+            SOCKET producer = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+            check(producer != INVALID_SOCKET, "create local load producer");
+            auto closeProducer = qScopeGuard([&] { closesocket(producer); });
+            u_long nonblocking = 1;
+            check(ioctlsocket(producer, FIONBIO, &nonblocking) == 0, "load producer is nonblocking");
+            sockaddr_in source{}, target{};
+            source.sin_family = target.sin_family = AF_INET;
+            source.sin_addr.s_addr = htonl(net | 1);
+            target.sin_addr.s_addr = htonl(net | 2);
+            target.sin_port = htons(45679);
+            check(bind(producer, reinterpret_cast<sockaddr *>(&source), sizeof(source)) == 0,
+                  "load is bound to disposable adapter");
+            std::atomic<quint64> produced = 0;
+            std::jthread load([&](std::stop_token stop) {
+                const QByteArray data(1200, 'x');
+                while (!stop.stop_requested()) {
+                    if (sendto(producer, data.constData(), int(data.size()), 0,
+                               reinterpret_cast<sockaddr *>(&target), sizeof(target)) > 0)
+                        ++produced;
+                    else
+                        std::this_thread::yield();
+                }
+            });
             helper.internet(true);
             helper.internet(false);
             helper.internet(true);
+            load.request_stop();
+            load.join();
+            check(produced > 1000 && helper.status["filtered"].toDouble() > 0,
+                  "control heartbeat and Internet toggles stay responsive during Wintun load");
             check(pipeSend(helper.pipe, {{"stop", true}}), "explicit disable reaches helper");
             helper.wait();
         }

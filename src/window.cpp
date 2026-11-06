@@ -84,7 +84,7 @@ static QTableWidget *table(QStringList headings) {
 }
 Window::Window(QString dataDir, bool startWorker) : dataDir_(std::move(dataDir)) {
 
-    setWindowTitle("ConsoleLAN 1.3.0 — LAN entre casas");
+    setWindowTitle("ConsoleLAN 1.3.1 — LAN entre casas");
     resize(1280, 920);
     setMinimumSize(1000, 700);
     auto central = new QWidget;
@@ -711,7 +711,7 @@ Window::Window(QString dataDir, bool startWorker) : dataDir_(std::move(dataDir))
             return;
         }
         QDialog dialog(this);
-        dialog.setWindowTitle(text("Manual de ConsoleLAN 1.3.0"));
+        dialog.setWindowTitle(text("Manual de ConsoleLAN 1.3.1"));
         dialog.resize(820, 700);
         auto layout = new QVBoxLayout(&dialog);
         auto browser = new QTextBrowser;
@@ -947,7 +947,7 @@ void Window::updateGuidance() {
 void Window::retranslate() {
     if (!uiReady_)
         return;
-    setWindowTitle(text("ConsoleLAN 1.3.0 — LAN entre casas"));
+    setWindowTitle(text("ConsoleLAN 1.3.1 — LAN entre casas"));
     translateUiText(this);
     vpn_->setAccessibleName(text("VPN de este PC"));
     ethernet_->setAccessibleName(text("Ethernet de las consolas"));
@@ -1201,7 +1201,7 @@ void Window::updateView(QJsonObject nextView) {
                  : rtt < 0      ? "—"
                                 : QString::number(rtt) + " ms"));
     QString diag =
-        text("ConsoleLAN 1.3.0 · diagnóstico\n\nVPN / socket: %1\nNpcap: %2\nEstado: %3\nTráfico Ethernet "
+        text("ConsoleLAN 1.3.1 · diagnóstico\n\nVPN / socket: %1\nNpcap: %2\nEstado: %3\nTráfico Ethernet "
              "observado: %4\nInyecciones realizadas: %5\nErrores de envío: %6\nRechazos de protocolo: "
              "%7\nFiltradas: %8\nDescartes por cola: %9\n\nUn paquete observado no demuestra conectividad "
              "entre consolas.\nLa latencia mide ida y vuelta al maestro, no el ping del juego.\n\n")

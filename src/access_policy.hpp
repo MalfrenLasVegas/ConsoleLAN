@@ -17,6 +17,8 @@ struct AccessPlan {
     bool operator==(const AccessPlan &) const = default;
 };
 std::optional<AccessPlan> accessPlan(const QJsonObject &view, QString *error = nullptr);
+QString localAccessCaptureFilter(quint32 pcIp);
+QString roomCaptureFilter();
 bool isLocalAccessFrame(const QByteArray &frame, quint32 subnet);
 struct AccessEthernet {
     QString adapter;

@@ -1,5 +1,6 @@
 #include "worker.hpp"
 #include "access_controller.hpp"
+#include "access_policy.hpp"
 namespace cl {
 Worker::Worker(QString dataDir, QObject *parent)
     : QObject(parent), dataDir_(std::move(dataDir)), thread_([this](std::stop_token stop) { run(stop); }) {}
@@ -53,7 +54,7 @@ void Worker::run(std::stop_token stop) {
         }
         emit logged(s);
     };
-    log("ConsoleLAN 1.3.0 iniciado. " + Capture::version());
+    log("ConsoleLAN 1.3.1 iniciado. " + Capture::version());
     if (!store.error.isEmpty())
         log(store.error);
     auto flush = [&]() {
@@ -233,7 +234,7 @@ void Worker::run(std::stop_token stop) {
                 if (captures.contains(id))
                     continue;
                 auto cap = std::make_unique<Capture>();
-                if (!cap->open(id)) {
+                if (!cap->open(id, roomCaptureFilter())) {
                     captureErrors << id + ": " + cap->error;
                     continue;
                 }

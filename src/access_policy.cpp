@@ -1,5 +1,16 @@
 #include "access_policy.hpp"
 namespace cl {
+QString localAccessCaptureFilter(quint32 pcIp) {
+    return QString("arp or (ip and (ether dst %1 or (src host %2 and not ether src %1)))")
+        .arg(AccessMac, ipText(pcIp));
+}
+QString roomCaptureFilter() {
+    // Preserve all duplicate-bridge beacons. ARP/IPv4 with the reserved MAC
+    // already fail Room::isLocalAccessFrame; reject them before copying them
+    // into the room capture queue so a fast local transfer cannot fill it.
+    return QString("ether proto 0x88b5 or ((arp or ip) and not (ether src %1 or ether dst %1))")
+        .arg(AccessMac);
+}
 static void put16(QByteArray &b, int p, quint16 n) {
     b[p] = char(n >> 8);
     b[p + 1] = char(n);
