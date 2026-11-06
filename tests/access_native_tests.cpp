@@ -140,6 +140,7 @@ static HANDLE launchSelf(const QString &args) {
 }
 struct HelperPeer {
     HANDLE pipe = INVALID_HANDLE_VALUE, process = nullptr;
+    QJsonObject status;
     HelperPeer() {
         const auto name =
             "\\\\.\\pipe\\ConsoleLAN-Access-" + QUuid::createUuid().toString(QUuid::WithoutBraces);
@@ -167,6 +168,7 @@ struct HelperPeer {
                 sent = clockMs();
             }
             if (auto reply = pipeRead(pipe, broken)) {
+                status = *reply;
                 if ((*reply)["state"] == "error")
                     throw std::runtime_error(qPrintable((*reply)["error"].toString()));
                 active = (*reply)["state"] == "active";
@@ -178,6 +180,28 @@ struct HelperPeer {
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
         check(active, "real helper owns active Wintun adapter");
+    }
+    void internet(bool enabled) {
+        auto config = helperConfig();
+        config["internet"] = enabled;
+        const auto index = status["adapterIndex"], guard = status["guardId"];
+        auto deadline = clockMs() + 5000;
+        bool broken = false, changed = false;
+        while (clockMs() < deadline && !changed) {
+            check(pipeSend(pipe, config), "send Internet toggle without changing access plan");
+            if (auto reply = pipeRead(pipe, broken)) {
+                status = *reply;
+                if (!status["internetError"].toString().isEmpty())
+                    throw std::runtime_error(qPrintable(status["internetError"].toString()));
+                changed = status["internetActive"].toBool() == enabled;
+            }
+            if (broken)
+                break;
+            std::this_thread::sleep_for(std::chrono::milliseconds(30));
+        }
+        check(changed && status["internetCapable"].toBool(), "helper applies optional Internet state");
+        check(status["adapterIndex"] == index && status["guardId"] == guard,
+              "Internet toggle preserves the existing adapter routes and WFP guard");
     }
     ~HelperPeer() {
         if (pipe != INVALID_HANDLE_VALUE) {
@@ -220,6 +244,7 @@ int main(int argc, char **argv) {
         return accessHelperMain(app.arguments()[2], app.arguments()[3].toUInt());
     if (app.arguments().size() == 3 && app.arguments()[1] == "--owner") {
         HelperPeer peer;
+        peer.internet(true);
         QFile handoff(app.arguments()[2]);
         if (!handoff.open(QIODevice::WriteOnly))
             return 2;
@@ -290,9 +315,17 @@ int main(int argc, char **argv) {
             iface.SitePrefixLength = 0;
             check(SetIpInterfaceEntry(&iface) == NO_ERROR, "enable routing only on disposable test ingress");
             const auto forwarded = tcp(incoming.subnet | 2, net | 2, 40000, 45678, 123, 0, 2);
-            auto arrives = [&](int timeout) {
+            auto arrives = [&](int timeout, bool warmup = false) {
                 const auto deadline = clockMs() + timeout;
+                qint64 injected = 0;
                 while (clockMs() < deadline) {
+                    // Route/filter changes and a new Wintun interface can settle
+                    // asynchronously. Retry the positive control on disposable
+                    // interfaces, rather than depending on one startup packet.
+                    if (warmup && clockMs() - injected >= 100) {
+                        check(ingress.send(forwarded), "warm up disposable forwarding path");
+                        injected = clockMs();
+                    }
                     if (auto packet = tun.receive())
                         if (packet->size() >= 20 && be32(*packet, 12) == (incoming.subnet | 2) &&
                             be32(*packet, 16) == (net | 2))
@@ -303,7 +336,7 @@ int main(int argc, char **argv) {
             };
             check(tun.removeLoopGuardForTest(), "remove test guard to reproduce legacy routed re-entry");
             check(ingress.send(forwarded), "inject synthetic transit packet on disposable ingress");
-            check(arrives(1500), "without guard Windows forwards transit packet back into Wintun");
+            check(arrives(6000, true), "without guard Windows forwards transit packet back into Wintun");
             tun.close();
             check(tun.open(plan, "ConsoleLAN Test"), qPrintable(tun.error));
             check(ingress.send(forwarded), "repeat identical transit packet with guard active");
@@ -473,18 +506,23 @@ int main(int argc, char **argv) {
               "test adapter removed on close");
         {
             HelperPeer helper;
+            helper.internet(true);
+            helper.internet(false);
+            helper.internet(true);
             check(pipeSend(helper.pipe, {{"stop", true}}), "explicit disable reaches helper");
             helper.wait();
         }
         assertHelperClean();
         {
             HelperPeer helper;
+            helper.internet(true);
             helper.disconnect();
             helper.wait();
         }
         assertHelperClean();
         {
             HelperPeer helper;
+            helper.internet(true);
             helper.wait();
         } // No heartbeat: the helper must clean up within four seconds.
         assertHelperClean();
@@ -509,7 +547,8 @@ int main(int argc, char **argv) {
         return result(
             "PASS: signed Wintun adapter; real Windows TCP FTP control and passive binary download and "
             "upload; host "
-            "routes; helper disable/disconnect/heartbeat timeout/parent crash cleanup; existing addresses "
+            "routes; optional Internet enable/disable preserves adapter and guard; helper cleanup with "
+            "Internet enabled on disable/disconnect/heartbeat timeout/parent crash; existing addresses "
             "unchanged. No physical console or hardware gameplay was tested.\n",
             0);
     } catch (const std::exception &e) {

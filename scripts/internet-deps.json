@@ -1,0 +1,42 @@
+[
+  {
+    "name": "libslirp",
+    "package": "mingw-w64-clang-x86_64-libslirp-4.9.7-1-any.pkg.tar.zst",
+    "sha256": "dc4d741b8f527d8054cd559ff0258761e8521390a2f9eb5902a96f7414b16da3",
+    "files": ["clang64/bin/libslirp-0.dll"],
+    "source": "mingw-w64-libslirp-4.9.7-1.src.tar.zst",
+    "sourceSha256": "7375e99a1b630f0261c6d725c5e5f558262e9ef58cf5a0fb789e2d78b9f515ec"
+  },
+  {
+    "name": "glib2",
+    "package": "mingw-w64-clang-x86_64-glib2-2.90.1-1-any.pkg.tar.zst",
+    "sha256": "174290215f3e5022d23c783b59c8127abed71527f648e28e429a22d9c494ae69",
+    "files": ["clang64/bin/libglib-2.0-0.dll"],
+    "source": "mingw-w64-glib2-2.90.1-1.src.tar.zst",
+    "sourceSha256": "ac3bc00e4079e6b51dd0a1fb9ccc420fff033b4e9095e4487dbf6cf01312cee6"
+  },
+  {
+    "name": "gettext-runtime",
+    "package": "mingw-w64-clang-x86_64-gettext-runtime-1.0-1-any.pkg.tar.zst",
+    "sha256": "6f22a64727816c9d9c8289bac9493a3c50691da678de22489d0545114568bb90",
+    "files": ["clang64/bin/libintl-8.dll"],
+    "source": "mingw-w64-gettext-1.0-1.src.tar.zst",
+    "sourceSha256": "cca0d0c8f60353faccc5ad40405240014e4a7ccc8b1c6ca9f4626aef3097d26e"
+  },
+  {
+    "name": "libiconv",
+    "package": "mingw-w64-clang-x86_64-libiconv-1.19.1-1-any.pkg.tar.zst",
+    "sha256": "8d16ca846553838f36ea4098dc543e0261bc248f77228d6765f3419a2dfd48da",
+    "files": ["clang64/bin/libiconv-2.dll"],
+    "source": "mingw-w64-libiconv-1.19.1-1.src.tar.zst",
+    "sourceSha256": "ed46bb1b524ad9bd9d843091bf7b18ab23e5cd21fef6de743c8c943bdc11dabe"
+  },
+  {
+    "name": "pcre2",
+    "package": "mingw-w64-clang-x86_64-pcre2-10.49-1-any.pkg.tar.zst",
+    "sha256": "8ea1407808aa043ed38c910406172b5a393efaa3712cd3bbcd0eb4bbc16b1d83",
+    "files": ["clang64/bin/libpcre2-8-0.dll"],
+    "source": "mingw-w64-pcre2-10.49-1.src.tar.zst",
+    "sourceSha256": "b02f0d5070b7d7f6db5c8ba9b009f28c1a07b9b52aaf7964dc0c8b098e4088d1"
+  }
+]

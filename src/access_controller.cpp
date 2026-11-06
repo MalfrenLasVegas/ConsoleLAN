@@ -13,8 +13,14 @@ AccessController::~AccessController() {
 void AccessController::enable(bool b) {
     std::lock_guard l(mutex_);
     requested_ = b;
+    if (!b)
+        internet_ = false;
     if (b)
         status_ = {{"state", "starting"}};
+}
+void AccessController::internet(bool b) {
+    std::lock_guard l(mutex_);
+    internet_ = requested_ && b;
 }
 void AccessController::update(QJsonObject v) {
     std::lock_guard l(mutex_);
@@ -24,6 +30,7 @@ QJsonObject AccessController::status() {
     std::lock_guard l(mutex_);
     auto s = status_;
     s["requested"] = requested_;
+    s["internetRequested"] = internet_;
     return s;
 }
 void AccessController::run(std::stop_token stop) {
@@ -42,6 +49,7 @@ void AccessController::run(std::stop_token stop) {
         auto finish = [&](QString error) {
             std::lock_guard l(mutex_);
             requested_ = false;
+            internet_ = false;
             status_ = {{"state", error.isEmpty() ? "off" : "error"}, {"error", error}};
         };
         QString error;
@@ -135,6 +143,7 @@ void AccessController::run(std::stop_token stop) {
                 std::lock_guard l(mutex_);
                 wanted = requested_;
                 v = view_;
+                v["internet"] = internet_;
             }
             if (!wanted)
                 break;
@@ -149,7 +158,8 @@ void AccessController::run(std::stop_token stop) {
             }
             if (auto reply = pipeRead(pipe, broken)) {
                 lastStatus = clockMs();
-                if ((*reply)["state"] == "active" && !(*reply)["loopGuard"].toBool()) {
+                if ((*reply)["state"] == "active" &&
+                    (!(*reply)["loopGuard"].toBool() || !(*reply)["internetCapable"].toBool())) {
                     error = "El auxiliar de acceso local está desactualizado. Actualiza ConsoleLAN y "
                             "ConsoleLAN.Access.exe juntos.";
                     break;

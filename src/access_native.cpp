@@ -1,6 +1,7 @@
 #include "access_native.hpp"
 #include "access_pipe.hpp"
 #include "capture.hpp"
+#include "internet.hpp"
 #include <iphlpapi.h>
 #include <netioapi.h>
 #include <fwpmu.h>
@@ -133,9 +134,10 @@ bool AccessAdapter::open(const AccessPlan &p, QString name) {
     WLOAD(closeAdapter, WintunCloseAdapter)
     WLOAD(luid, WintunGetAdapterLUID)
     WLOAD(start, WintunStartSession)
-    WLOAD(end, WintunEndSession) WLOAD(receive, WintunReceivePacket)
-        WLOAD(release, WintunReleaseReceivePacket) WLOAD(allocate, WintunAllocateSendPacket)
-            WLOAD(send, WintunSendPacket)
+    WLOAD(end, WintunEndSession)
+    WLOAD(receive, WintunReceivePacket)
+    WLOAD(release, WintunReleaseReceivePacket)
+    WLOAD(allocate, WintunAllocateSendPacket) WLOAD(send, WintunSendPacket)
 #undef WLOAD
         // Stable identity; never open, reconfigure or remove somebody else's adapter.
         GUID guid{0x3c25397a, 0x0c31, 0x4b99, {0xbf, 0x36, 0x43, 0xf5, 0x37, 0xc5, 0xb0, 0x55}};
@@ -255,6 +257,9 @@ int accessHelperMain(const QString &pipeName, quint32 parentPid) {
     DWORD mode = PIPE_READMODE_MESSAGE;
     SetNamedPipeHandleState(pipe, &mode, nullptr, nullptr);
     AccessAdapter tun;
+    InternetGateway internet;
+    bool internetWanted = false;
+    QString internetError;
     std::optional<AccessPlan> current;
     std::map<QString, std::unique_ptr<Capture>> captures;
     bool broken = false;
@@ -271,6 +276,9 @@ int accessHelperMain(const QString &pipeName, quint32 parentPid) {
             if (!plan)
                 break;
             if (!current || *current != *plan) {
+                internet.close();
+                internetWanted = false;
+                internetError.clear();
                 tun.close();
                 captures.clear();
                 current.reset();
@@ -343,6 +351,22 @@ int accessHelperMain(const QString &pipeName, quint32 parentPid) {
 #endif
                 current = *plan;
             }
+            const bool requestedInternet = (*config)["internet"].toBool();
+            if (requestedInternet != internetWanted) {
+                internetWanted = requestedInternet;
+                internetError.clear();
+                internet.close();
+                if (internetWanted && !internet.open(*current, [&](const AccessEthernet &f) {
+                        if (!captures.contains(f.adapter))
+                            return false;
+                        auto &cap = captures.at(f.adapter);
+                        if (cap->inject(f.bytes))
+                            return true;
+                        error = cap->error;
+                        return false;
+                    }))
+                    internetError = internet.error;
+            }
         }
         if (broken)
             break;
@@ -370,6 +394,8 @@ int accessHelperMain(const QString &pipeName, quint32 parentPid) {
                         error = "Conflicto de IP en el acceso local. Se ha detenido el adaptador propio.";
                         break;
                     }
+                    if (internet.input(id, *b))
+                        continue;
                     if (!reply.ethernet.isEmpty() && !cap->inject(reply.ethernet))
                         error = cap->error;
                     if (!reply.ip.isEmpty() && tun.send(reply.ip))
@@ -377,6 +403,11 @@ int accessHelperMain(const QString &pipeName, quint32 parentPid) {
                 }
                 if (!cap->error.isEmpty())
                     error = cap->error;
+            }
+            internet.poll();
+            if (!internet.error.isEmpty() && internet.active()) {
+                internetError = internet.error;
+                internet.close();
             }
             if (!tun.error.isEmpty())
                 error = tun.error;
@@ -387,6 +418,13 @@ int accessHelperMain(const QString &pipeName, quint32 parentPid) {
             if (!pipeSend(pipe, {{"state", current ? "active" : "starting"},
                                  {"pcIp", current ? ipText(current->pcIp()) : QString()},
                                  {"loopGuard", current.has_value() && tun.loopGuardId() != 0},
+                                 {"adapterIndex", int(tun.index())},
+                                 {"guardId", QString::number(tun.loopGuardId())},
+                                 {"internetCapable", true},
+                                 {"internetActive", internet.active()},
+                                 {"internetError", internetError},
+                                 {"internetSent", double(internet.sent())},
+                                 {"internetReceived", double(internet.received())},
                                  {"sent", double(sent)},
                                  {"received", double(received)},
                                  {"filtered", double(filtered)}}))
@@ -395,6 +433,7 @@ int accessHelperMain(const QString &pipeName, quint32 parentPid) {
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(2));
     }
+    internet.close();
     tun.close();
     captures.clear();
     if (!error.isEmpty())

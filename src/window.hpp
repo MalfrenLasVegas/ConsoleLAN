@@ -22,8 +22,8 @@ class Window : public QMainWindow {
     QGridLayout *connectionGrid_;
     QFrame *networkCard_, *roomCard_, *consoleDetails_;
     QLabel *stateBadge_, *nextStep_, *consoleMeta_, *consoleDetailTitle_, *quickStats_, *reservationsEmpty_,
-        *discoveryHint_, *consoleHelp_, *accessStatus_;
-    QPushButton *copy_, *manage_, *joinFound_, *add_, *accessToggle_;
+        *discoveryHint_, *consoleHelp_, *accessStatus_, *internetStatus_, *gatewayInfo_, *dnsInfo_;
+    QPushButton *copy_, *manage_, *joinFound_, *add_, *accessToggle_, *internetToggle_;
     QAction *applyEthernet_, *relearnMac_, *forgetConsole_;
     bool wideLayout_ = true;
     bool discoverySearching_ = false, discoverySearched_ = false;
@@ -46,7 +46,7 @@ class Window : public QMainWindow {
     void selectionChanged();
     void joinDirect();
     void exportDiagnostic();
-    QString configuration() const;
+    Q_INVOKABLE QString configuration() const;
 
   public:
     explicit Window(QString dataDir, bool startWorker = true);

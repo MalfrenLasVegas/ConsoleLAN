@@ -5,7 +5,7 @@
 namespace cl {
 class AccessController {
     std::mutex mutex_;
-    bool requested_ = false;
+    bool requested_ = false, internet_ = false;
     QJsonObject view_, status_{{"state", "off"}};
     void run(std::stop_token stop);
     std::jthread thread_;
@@ -14,6 +14,7 @@ class AccessController {
     AccessController();
     ~AccessController();
     void enable(bool enabled);
+    void internet(bool enabled);
     void update(QJsonObject view);
     QJsonObject status();
 };

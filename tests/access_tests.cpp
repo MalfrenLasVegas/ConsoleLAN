@@ -97,6 +97,49 @@ int main(int argc, char **argv) {
               "ARP responder makes local PC reachable from console");
         check(isLocalAccessFrame(arp, net) && isLocalAccessFrame(frame->bytes, net),
               "ARP and IPv4 PC traffic marked outside VPN plane");
+        auto internetFrame = [&](quint32 destination, int protocol = 6, quint16 port = 443) {
+            auto ip = packet(net | 2, destination);
+            ip[9] = char(protocol);
+            p16(ip, 20, 40000);
+            p16(ip, 22, port);
+            return QByteArray::fromHex(AccessMac.toLatin1()) +
+                   QByteArray::fromHex(c["mac"].toString().toLatin1()) + QByteArray::fromHex("0800") + ip;
+        };
+        auto internet = internetFrame(0x01010101);
+        check(internetInput(*plan, "ethernet", internet), "owned console may reach public TCP endpoints");
+        auto sourceRoute = internet;
+        sourceRoute[14] = 0x46;
+        sourceRoute.insert(34, QByteArray(4, 0));
+        p16(sourceRoute, 16, 44);
+        check(!internetInput(*plan, "ethernet", sourceRoute),
+              "IPv4 options cannot bypass destination isolation");
+        check(internetInput(*plan, "ethernet", internetFrame(0x08080808, 17, 53)),
+              "public UDP DNS is allowed");
+        check(internetInput(*plan, "ethernet", internetFrame(0x01010101, 1)), "ICMP can enter the stack");
+        check(!internetInput(*plan, "other", internet), "Internet cannot use another Ethernet");
+        internet[6] = char(4);
+        check(!internetInput(*plan, "ethernet", internet), "spoofed MAC cannot use Internet");
+        for (auto destination :
+             {0x00000001u, 0x0a010101u, 0x64400001u, 0x7f000001u, 0xa9fe0101u, 0xac100101u, 0xc0a80101u,
+              0xc0000201u, 0xc6120001u, 0xc6336401u, 0xcb007101u, 0xe00000fbu, 0xffffffffu, net | 3})
+            check(!internetInput(*plan, "ethernet", internetFrame(destination)),
+                  "private, special and room destinations stay outside the Internet path");
+        check(internetInput(*plan, "ethernet", internetFrame(net | 1, 17, 53)) &&
+                  internetInput(*plan, "ethernet", internetFrame(net | 1, 6, 53)),
+              "gateway DNS accepts TCP and UDP");
+        check(!internetInput(*plan, "ethernet", internetFrame(net | 1, 6, 2121)),
+              "local PC services stay on the original access path");
+        internet = internetFrame(net | 1, 17, 53);
+        p16(internet, 20, 0x2000);
+        check(!internetInput(*plan, "ethernet", internet),
+              "fragmented DNS cannot bypass host port isolation");
+        check(internetInput(*plan, "ethernet", arp), "gateway ARP can populate the NAT neighbor table");
+        internet = internetFrame(0x01010101);
+        check(isLocalAccessFrame(internet, net), "Internet frames never enter the room VPN");
+        auto output = frame->bytes;
+        check(internetOutput(*plan, output).has_value(), "gateway output selects the local console Ethernet");
+        output[0] = char(4);
+        check(!internetOutput(*plan, output), "NAT output cannot target an unregistered MAC");
         Room host;
         host.host("isolation", net, clockMs());
         const auto filtered = host.view()["filtered"].toDouble();

@@ -1,4 +1,4 @@
-# ConsoleLAN 1.2.2 manual
+# ConsoleLAN 1.3.0 manual
 
 ## Language and appearance
 
@@ -34,11 +34,9 @@ Rooms are open to participants of the trusted VPN. Room IDs and session tokens a
 
 Choose the physical Ethernet interface or leave automatic detection selected, then click **Add console**. Each PC can remember up to 16 consoles. The host grants an authoritative IP reservation. Wait until the reserved address appears before configuring the console.
 
-Select the console row and use **Copy IP configuration**. Set a manual wired address on the console using that IP and mask `255.255.255.0`. Assignable addresses are `.2` through `.254`; `.1` is reserved but does not run a gateway or DNS server.
+Select the console row and use **Copy configuration**. Set the reserved IP and mask `255.255.255.0` manually on the console. Assignable addresses remain `.2` through `.254`; `.1` is reserved for local access and optional Internet.
 
-Leave gateway and DNS blank or `0.0.0.0` if the console accepts that. **ConsoleLAN does not provide Internet access, PSN, DNS or a virtual router.** Do not copy gateway/DNS values from the conceptual illustrations expecting a service to exist there.
-
-Some console firmware requires values before saving a LAN configuration. If it permits operation without those services, its own reserved IP may be used only as a configuration placeholder, knowing that there is no gateway/DNS service at that address and the Internet test will fail. This does not guarantee the firmware will accept or retain it. Firmware/game combinations that insist on successful online validation need an additional networking solution outside this release's scope.
+With optional Internet off, leave gateway/DNS blank or `0.0.0.0` if accepted. Firmware that requires values may accept the console’s own IP as a placeholder for LAN use without those services; that is not a working gateway or DNS. To obtain real services, enable **Internet for your consoles** below and copy the updated values.
 
 An Internet test may fail while wired LAN is available. Use the game's **LAN/System Link** mode, not its online/PSN mode. Console/game/firmware compatibility, versions, content and latency limits must be tested separately.
 
@@ -84,20 +82,35 @@ The tunnel cannot isolate physical switch ports: consoles on the same switch may
 
 This optional feature starts disabled and requires an active room. Add a console and wait for its reserved IP, MAC and Ethernet adapter to be detected. Under **Access from this PC**, click **Enable local access** and approve the Windows administrator prompt for `ConsoleLAN.Access.exe`.
 
-ConsoleLAN creates its own **ConsoleLAN Local** Wintun adapter. It uses the room subnet's reserved `.1` address with `/32` routes only to detected local consoles. `.1` is excluded from console reservations; it is not a gateway or DNS server. Existing Ethernet/VPN addresses, DHCP, DNS and gateways are not changed. Overlapping networks and ARP conflicts on `.1` prevent activation.
+ConsoleLAN creates its own **ConsoleLAN Local** Wintun adapter. It uses the room subnet's reserved `.1` address with `/32` routes only to detected local consoles. `.1` is excluded from console reservations; it provides gateway/DNS only while optional Internet is enabled. Existing Ethernet/VPN addresses, DHCP, DNS and gateways are not changed. Overlapping networks and ARP conflicts on `.1` prevent activation.
 
 Once local access is enabled, connect your FTP client to your console's reserved IP and its FTP server port. The console must already be running an FTP server. Passive FTP is recommended; this feature does not open firewall ports for servers on your PC. LAN gaming can continue at the same time. Consoles in other homes are not accessible through this feature.
 
 Disabling local access, leaving the room or closing ConsoleLAN removes its own host routes and adapter. The helper also stops if its parent process dies, the control pipe disconnects or heartbeats stop. Wait for the adapter to disappear before changing the room subnet. The shared Wintun driver is not uninstalled, since other applications may use it.
 
-Cancelling or denying administrator permission leaves local access disabled without stopping the room. Loss of a valid local IP/MAC/Ethernet target stops local access; enable it again after resolving the issue. This is IPv4-only and creates no Windows bridges, NAT or default route.
+Cancelling or denying administrator permission leaves local access disabled without stopping the room. Loss of a valid local IP/MAC/Ethernet target stops local access; enable it again after resolving the issue. This is IPv4-only and creates no Windows bridge, ICS, WinNAT or default route on the PC. Optional Internet uses NAT inside the helper process.
 
 The automated 1.2 test uses the signed driver and real Windows TCP for passive FTP against a simulated console. This does not certify a physical PS5 FTP server or a real console gameplay session.
 
-## TCP and FTP without changing the home network (1.2.2)
+## TCP and FTP without changing the home network (1.3.0)
 
 Optional PC access allows any TCP port on registered local consoles, not just 21 or 2121. Use the port configured by the console service. Passive FTP uses a separate outbound TCP data connection and is also supported when its destination remains an authorized local console. The console must already be running its server.
 
 While enabled, a temporary WFP guard blocks only packets Windows tries to forward into the ConsoleLAN adapter. Locally originated application connections remain available. This prevents reinjection loops when Windows forwarding is enabled elsewhere, without changing physical Ethernet/VPN forwarding, IP/DNS settings or persistent Windows Firewall rules. The dynamic guard is removed with the adapter/helper session. Failure to install it leaves access disabled rather than unprotected.
 
 Update the main app and `ConsoleLAN.Access.exe` together: an old helper that cannot confirm the guard is rejected. Connection refusal before an FTP greeting requires checking the server and port. Physical validation included a server restart followed by FTP connection, login and passive listing; no console files were written.
+
+## Internet for your consoles (1.3)
+
+1. Keep the room open and wait for a local console with a valid IP, MAC and Ethernet adapter.
+2. Enable **Local access**, accept Windows elevation, then enable **Internet for your consoles**.
+3. Select your console and **Copy configuration**. For room subnet `192.168.50.0/24`, gateway and primary DNS are both `192.168.50.1`. Keep the console’s reserved IP and `255.255.255.0` mask. For another room subnet, use its `.1`. Leave secondary DNS blank when supported.
+4. Enter these values in the console’s manual wired setup. Test Internet and then the game’s LAN mode separately. FTP continues to use the console’s IP and service port.
+
+Each site enables Internet on its own PC. Traffic uses that PC’s normal Windows Internet route, independently of the room relay. A VPN that changes the PC’s default route can also affect this traffic. Existing Ethernet/VPN IP, DHCP, DNS, gateway and forwarding settings stay unchanged. No ICS, WinNAT, Windows bridge, router configuration or persistent firewall rules are installed.
+
+Only authorized local consoles may initiate IPv4 TCP/UDP connections and use gateway DNS over TCP/UDP. ICMP depends on Windows support. DHCP/IPv6 are not provided. Private/special destinations are excluded from Internet access; local FTP keeps its existing path.
+
+Disabling **Internet** closes console Internet connections while preserving local access and the room. Disabling local access, leaving the room, closing the app or losing the helper also stops Internet. It starts disabled each session. A console retaining this gateway/DNS has no Internet while its PC is off.
+
+No UPnP or inbound port forwarding is provided. NAT type 2, PSN, Remote Play and all online games are not guaranteed. An enabled gateway means the module is ready, not that Sony has certified connectivity. See [validation and limits](INFORME-1.3.0.md).

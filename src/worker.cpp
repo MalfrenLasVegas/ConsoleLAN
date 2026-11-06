@@ -53,7 +53,7 @@ void Worker::run(std::stop_token stop) {
         }
         emit logged(s);
     };
-    log("ConsoleLAN 1.2.2 iniciado. " + Capture::version());
+    log("ConsoleLAN 1.3.0 iniciado. " + Capture::version());
     if (!store.error.isEmpty())
         log(store.error);
     auto flush = [&]() {
@@ -102,6 +102,9 @@ void Worker::run(std::stop_token stop) {
             auto op = c["op"].toString();
             if (op == "localAccess") {
                 localAccess.enable(c["enabled"].toBool());
+                continue;
+            } else if (op == "internet") {
+                localAccess.internet(c["enabled"].toBool());
                 continue;
             }
             if (!store.error.isEmpty()) {

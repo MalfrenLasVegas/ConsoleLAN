@@ -1,4 +1,4 @@
-# ConsoleLAN 1.2.2
+# ConsoleLAN 1.3.0
 
 Español · [English](README.en.md)
 
@@ -6,16 +6,24 @@ Aplicación Windows x64 en C++20, Qt 6 Widgets, Winsock y Npcap para extender tr
 
 **Estado de la versión:** 54 comprobaciones del núcleo y pruebas Winsock con tres sockets reales superadas. La compatibilidad con consolas, switches y juegos requiere la [aceptación con hardware](docs/ACEPTACION.md); se han comunicado partidas reales satisfactorias, sin certificar compatibilidad universal.
 
-## Descargar ConsoleLAN 1.2.2
+## Descargar ConsoleLAN 1.3.0
 
-- [Instalador para Windows x64](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.2.2/ConsoleLAN-1.2.2-win64-setup.exe)
-- [Versión portátil con Qt](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.2.2/ConsoleLAN-1.2.2-win64-portable.zip)
-- [Código fuente y documentación ilustrada](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.2.2/ConsoleLAN-1.2.2-source.zip)
-- [Sumas SHA256](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.2.2/SHA256SUMS.txt)
+- [Instalador para Windows x64](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.3.0/ConsoleLAN-1.3.0-win64-setup.exe)
+- [Versión portátil con Qt](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.3.0/ConsoleLAN-1.3.0-win64-portable.zip)
+- [Código fuente y documentación ilustrada](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.3.0/ConsoleLAN-1.3.0-source.zip)
+- [Sumas SHA256](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.3.0/SHA256SUMS.txt)
 
-Consulte las [notas de la Release 1.2.2](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/tag/v1.2.2) antes de instalar. Npcap se instala por separado y la versión portátil requiere Microsoft Visual C++ Runtime x64 actualizado.
+Consulte las [notas de la Release 1.3.0](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/tag/v1.3.0) antes de instalar. Npcap se instala por separado y la versión portátil requiere Microsoft Visual C++ Runtime x64 actualizado.
 
-## TCP y FTP en 1.2.2
+## Internet opcional en 1.3.0
+
+Activa **Acceso local** y después **Internet para tus consolas**. La app mostrará la `.1` de la sala como puerta de enlace y DNS para las consolas de este PC. Configúralos manualmente en la consola; conserva su IP y máscara. Cada casa comparte su propia salida a Internet, sin cambiar la Ethernet, el router o la VPN. Desactivado por defecto. [Configuración, límites y pruebas](docs/INFORME-1.3.0.md).
+
+No instala ICS ni WinNAT y no abre puertos entrantes: no promete NAT tipo 2, UPnP ni compatibilidad universal con PSN. El PC debe permanecer encendido y conectado.
+
+![Internet opcional: gateway y DNS activos (datos de ejemplo)](docs/images/consolelan-1.3-internet-dark-es.png)
+
+## TCP y FTP
 
 El acceso opcional del PC admite cualquier puerto TCP de las consolas locales registradas, sin una lista de puertos limitada a FTP. Se corrige un bucle cuando Windows reenvía paquetes hacia el adaptador virtual: una protección WFP temporal y limitada a ese adaptador evita que los paquetes inyectados en Ethernet vuelvan a entrar en Wintun. No se desactiva el reenvío de la Ethernet ni de la VPN.
 
@@ -28,7 +36,7 @@ Se ignoran las tramas emitidas o retransmitidas por la propia MAC de la Ethernet
 ## Novedades de 1.2
 
 - **Acceso opcional del PC a sus consolas locales**: adaptador propio Wintun firmado para usar FTP u otros servicios, mientras continúa la LAN de juego. No modifica la Ethernet ni la VPN existentes.
-- Solo rutas hacia las consolas de este PC. Sin puerta de enlace, DNS, NAT ni acceso a consolas de otras casas por esta función.
+- Solo rutas hacia las consolas de este PC. Sin ruta por defecto en el PC ni acceso a consolas de otras casas por esta función. La salida a Internet de las consolas tiene su propio interruptor opcional.
 - Auxiliar elevado separado: el programa principal sigue funcionando como usuario normal. Cancelar el permiso deja el acceso desactivado.
 - Retirada de las rutas y del adaptador al desactivar, salir de la sala o cerrar; protección ante pérdida del canal, latidos o proceso principal.
 - Interfaz guiada y textos más claros, campos IP separados, confirmación de copia, tema claro/oscuro y español/inglés.
@@ -41,16 +49,16 @@ Capturas de la interfaz real con datos de ejemplo, no una partida verificada. Co
 
 ## Vista general
 
-Las siguientes imágenes son **ilustraciones conceptuales aportadas para la documentación**, no capturas de la interfaz final ni certificaciones de compatibilidad. Las VPN se ejecutan en los PC; las consolas se conectan por Ethernet a su switch local. ConsoleLAN no proporciona Internet, gateway ni DNS a las consolas.
+Las siguientes imágenes son **ilustraciones conceptuales aportadas para la documentación**, no capturas de la interfaz final ni certificaciones de compatibilidad. Las VPN se ejecutan en los PC; las consolas se conectan por Ethernet a su switch local. Desde 1.3, el gateway y DNS se ofrecen solo al activar Internet opcional en cada PC.
 
 ![Vista general conceptual de ConsoleLAN: consolas en distintas casas y un flujo de selección de VPN, sala y configuración manual](docs/images/consolelan-vista-general.png)
 
-> Las menciones de compatibilidad universal, seguridad y baja latencia en la ilustración son orientativas: dependen del hardware, el modo LAN del juego y la VPN. La reserva de IP es automática en el maestro, pero la configuración de la consola es manual. Los valores de gateway/DNS dibujados no corresponden a servicios ofrecidos por ConsoleLAN.
+> Las menciones de compatibilidad universal, seguridad y baja latencia en la ilustración son orientativas: dependen del hardware, el modo LAN del juego y la VPN. La reserva de IP es automática en el maestro, pero la configuración de la consola es manual. Use los valores que muestre la app, no los de la ilustración; gateway y DNS solo funcionan si Internet está activado.
 
 ## Empezar
 
 1. Instalar Npcap desde [su página oficial](https://npcap.com/#download) en cada PC. No se incluye en esta distribución.
-2. Descargar el [instalador o el ZIP portátil de la Release 1.2.2](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/tag/v1.2.2). Instalar `ConsoleLAN-1.2.2-win64-setup.exe`, o descomprimir el ZIP portátil y abrir `ConsoleLAN.exe`. La versión portátil requiere Microsoft Visual C++ Runtime x64 actualizado. Al obtener únicamente el código de este repositorio, siga las instrucciones de compilación de abajo para generar `dist/`.
+2. Descargar el [instalador o el ZIP portátil de la Release 1.3.0](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/tag/v1.3.0). Instalar `ConsoleLAN-1.3.0-win64-setup.exe`, o descomprimir el ZIP portátil y abrir `ConsoleLAN.exe`. La versión portátil requiere Microsoft Visual C++ Runtime x64 actualizado. Al obtener únicamente el código de este repositorio, siga las instrucciones de compilación de abajo para generar `dist/`.
 3. Elegir la VPN correcta y la Ethernet de las consolas. Crear una sala en un PC y entrar desde los demás mediante la IPv4 VPN del anfitrión.
 4. Añadir las consolas, aplicar las IP reservadas y seguir [el manual](docs/MANUAL.md).
 5. Completar [la aceptación con dos PC](docs/ACEPTACION.md) antes de dar por verificada una partida LAN.
@@ -60,6 +68,7 @@ Las siguientes imágenes son **ilustraciones conceptuales aportadas para la docu
 En una consola Windows con CMake, Ninja, Visual Studio C++ x64 y Qt con Core, Widgets y Test (empaquetado verificado con Qt 6.12.0):
 
 ```powershell
+python -m pip install zstandard==0.25.0
 $env:Qt6_ROOT = 'D:\Qt\6.12.0\msvc2022_64'
 .\scripts\fetch-deps.ps1 -Packaging
 .\scripts\build.cmd

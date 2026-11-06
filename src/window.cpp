@@ -84,7 +84,7 @@ static QTableWidget *table(QStringList headings) {
 }
 Window::Window(QString dataDir, bool startWorker) : dataDir_(std::move(dataDir)) {
 
-    setWindowTitle("ConsoleLAN 1.2.2 — LAN entre casas");
+    setWindowTitle("ConsoleLAN 1.3.0 — LAN entre casas");
     resize(1280, 920);
     setMinimumSize(1000, 700);
     auto central = new QWidget;
@@ -470,8 +470,10 @@ Window::Window(QString dataDir, bool startWorker) : dataDir_(std::move(dataDir))
     ipInfo_ = addressField(0, "Dirección IP", {});
     ipInfo_->setObjectName("consoleIpAddress");
     addressField(1, "Máscara de red", "255.255.255.0");
-    addressField(2, "Puerta de enlace", "Vacía o 0.0.0.0");
-    addressField(3, "DNS", "Sin configurar");
+    gatewayInfo_ = addressField(2, "Puerta de enlace", {});
+    gatewayInfo_->setObjectName("consoleGateway");
+    dnsInfo_ = addressField(3, "DNS", {});
+    dnsInfo_->setObjectName("consoleDns");
     detail->addLayout(addresses);
     consoleHelp_ = makeLabel({}, "helper");
     consoleHelp_->setObjectName("consoleConfigurationHelp");
@@ -501,16 +503,35 @@ Window::Window(QString dataDir, bool startWorker) : dataDir_(std::move(dataDir))
     accessStatus_->setObjectName("localAccessStatus");
     accessLayout->addWidget(accessStatus_);
     accessLayout->addWidget(
-        makeLabel("Windows pedirá permiso de administrador. ConsoleLAN creará un adaptador propio, sin "
-                  "puerta de enlace ni DNS, y lo retirará al desactivar el acceso o cerrar la app. Solo se "
-                  "permite acceder a las consolas de este PC.",
+        makeLabel("Windows pedirá permiso de administrador. ConsoleLAN creará un adaptador propio para "
+                  "acceder a tus consolas y lo retirará al desactivar el acceso o cerrar la app. "
+                  "La Ethernet y la VPN conservan sus ajustes.",
                   "helper"));
     connect(accessToggle_, &QPushButton::clicked, this, [this] {
         post({{"op", "localAccess"}, {"enabled", !view_["localAccess"].toObject()["requested"].toBool()}});
     });
+    auto internetHeading = new QHBoxLayout;
+    internetHeading->addWidget(makeLabel("Internet para tus consolas · opcional", "cardTitle"), 1);
+    internetToggle_ = new QPushButton;
+    internetToggle_->setObjectName("internetToggle");
+    internetToggle_->setProperty("dynamicText", true);
+    internetHeading->addWidget(internetToggle_);
+    accessLayout->addLayout(internetHeading);
+    internetStatus_ = makeLabel({}, "helper");
+    internetStatus_->setObjectName("internetStatus");
+    accessLayout->addWidget(internetStatus_);
+    accessLayout->addWidget(
+        makeLabel("Comparte la salida a Internet de este PC con sus consolas locales. "
+                  "El PC debe seguir encendido y conectado. No cambia la Ethernet ni la VPN. "
+                  "No abre puertos entrantes ni garantiza un tipo de NAT para PlayStation Network.",
+                  "helper"));
+    connect(internetToggle_, &QPushButton::clicked, this, [this] {
+        post({{"op", "internet"},
+              {"enabled", !view_["localAccess"].toObject()["internetRequested"].toBool()}});
+    });
     flow->addWidget(accessCard);
     auto footer = new QHBoxLayout;
-    auto lanOnly = makeLabel("Para jugar en modo LAN. No proporciona Internet a las consolas.", "helper");
+    auto lanOnly = makeLabel("La sala LAN y la salida opcional a Internet funcionan por separado.", "helper");
     footer->addWidget(lanOnly, 1);
     quickStats_ = makeLabel({}, "helper");
     quickStats_->setWordWrap(false);
@@ -690,7 +711,7 @@ Window::Window(QString dataDir, bool startWorker) : dataDir_(std::move(dataDir))
             return;
         }
         QDialog dialog(this);
-        dialog.setWindowTitle(text("Manual de ConsoleLAN 1.2.2"));
+        dialog.setWindowTitle(text("Manual de ConsoleLAN 1.3.0"));
         dialog.resize(820, 700);
         auto layout = new QVBoxLayout(&dialog);
         auto browser = new QTextBrowser;
@@ -735,9 +756,9 @@ Window::Window(QString dataDir, bool startWorker) : dataDir_(std::move(dataDir))
     status_->setObjectName("connectionStatus");
     diagnostics_->setObjectName("diagnostics");
     logs_->setObjectName("logs");
-    for (auto label :
-         {status_, roomInfo_, counters_, ipInfo_, errors_, stateBadge_, nextStep_, consoleMeta_,
-          consoleDetailTitle_, quickStats_, reservationsEmpty_, discoveryHint_, consoleHelp_, accessStatus_})
+    for (auto label : {status_, roomInfo_, counters_, ipInfo_, errors_, stateBadge_, nextStep_, consoleMeta_,
+                       consoleDetailTitle_, quickStats_, reservationsEmpty_, discoveryHint_, consoleHelp_,
+                       accessStatus_, internetStatus_, gatewayInfo_, dnsInfo_})
         label->setProperty("dynamicText", true);
     rememberUiText(this);
     uiReady_ = true;
@@ -806,16 +827,23 @@ void Window::updateConsoleDetails() {
         return;
     consoleDetailTitle_->setText(selected.name);
     ipInfo_->setText(assigned ? ipText(selected.ip) : text("Pendiente"));
+    const bool internet = local && view_["localAccess"].toObject()["internetActive"].toBool();
+    const auto gateway = ipText((selected.ip & 0xffffff00) | 1);
+    gatewayInfo_->setText(internet ? gateway : text("Vacía o 0.0.0.0"));
+    dnsInfo_->setText(internet ? gateway : text("Sin configurar"));
     const bool copied = assigned && copiedConsole_ == selectedConsole_ && copiedOwner_ == selectedOwner_;
     copy_->setText(text(copied ? "Copiado" : "Copiar configuración"));
     copy_->setToolTip(text(copied ? "Configuración copiada al portapapeles."
                                   : "Copia estos datos para consultarlos al configurar tu consola."));
-    consoleHelp_->setText(assigned
-                              ? text("En tu consola, elige conexión por cable y configuración manual. Si "
-                                     "exige otros valores de puerta de enlace o DNS, consulta la ayuda.")
-                              : text(view_["mode"].toString() == "offline"
-                                         ? "Crea una sala o únete a una para recibir una IP."
-                                         : "Esperando una IP para esta consola…"));
+    consoleHelp_->setText(
+        assigned
+            ? internet
+                  ? text("En tu consola, elige conexión por cable y configuración manual. "
+                         "Usa estos valores de puerta de enlace y DNS para salir a Internet por este PC.")
+                  : text("En tu consola, elige conexión por cable y configuración manual. Si "
+                         "exige otros valores de puerta de enlace o DNS, consulta la ayuda.")
+            : text(view_["mode"].toString() == "offline" ? "Crea una sala o únete a una para recibir una IP."
+                                                         : "Esperando una IP para esta consola…"));
     QString adapter = selected.adapter;
     for (const auto &a : adapters_)
         if (a.id == adapter) {
@@ -835,6 +863,19 @@ void Window::updateGuidance() {
     accessToggle_->setEnabled(accessRequested || plan.has_value());
     accessToggle_->setText(text(accessRequested ? "Desactivar acceso local" : "Activar acceso local"));
     const auto accessState = access["state"].toString();
+    const bool internetRequested = access["internetRequested"].toBool();
+    internetToggle_->setEnabled(internetRequested ||
+                                (accessState == "active" && access["internetCapable"].toBool()));
+    internetToggle_->setText(text(internetRequested ? "Desactivar Internet" : "Activar Internet"));
+    internetStatus_->setText(
+        access["internetActive"].toBool() ? text("Puerta de enlace y DNS activos: %1. Configura ambos en tu "
+                                                 "consola; la IP y la máscara no cambian.")
+                                                .arg(access["pcIp"].toString())
+        : !access["internetError"].toString().isEmpty() ? message(access["internetError"].toString())
+        : internetRequested                             ? text("Preparando la salida a Internet…")
+        : accessState == "active"
+            ? text("Desactivado. Puedes activarlo y copiar los valores de puerta de enlace y DNS.")
+            : text("Desactivado. Activa primero el acceso local; después podrás compartir Internet."));
     accessStatus_->setText(
         accessState == "active" ? text("Acceso TCP/IP activo · IP de este PC: %1. Usa la IP de la consola "
                                        "y el puerto de su servicio.")
@@ -906,7 +947,7 @@ void Window::updateGuidance() {
 void Window::retranslate() {
     if (!uiReady_)
         return;
-    setWindowTitle(text("ConsoleLAN 1.2.2 — LAN entre casas"));
+    setWindowTitle(text("ConsoleLAN 1.3.0 — LAN entre casas"));
     translateUiText(this);
     vpn_->setAccessibleName(text("VPN de este PC"));
     ethernet_->setAccessibleName(text("Ethernet de las consolas"));
@@ -1024,12 +1065,19 @@ void Window::selectionChanged() {
 QString Window::configuration() const {
     for (auto v : view_["consoles"].toArray()) {
         auto c = consoleFromJson(v.toObject());
-        if (c.key == selectedConsole_ && c.owner == selectedOwner_)
+        if (c.key == selectedConsole_ && c.owner == selectedOwner_) {
+            if (c.owner == view_["owner"].toString() &&
+                view_["localAccess"].toObject()["internetActive"].toBool())
+                return text("%1\nIP: %2    Máscara: 255.255.255.0\nPuerta de enlace: %3    DNS primario: %3\n"
+                            "Configura la conexión por cable manualmente. Mantén ConsoleLAN, el acceso local "
+                            "e Internet activos en este PC.")
+                    .arg(c.name, ipText(c.ip), ipText((c.ip & 0xffffff00) | 1));
             return text("%1\nIP: %2    Máscara: 255.255.255.0\nGateway: vacío / 0.0.0.0    DNS: sin "
                         "configurar (no se proporciona servicio DNS)\nConfigure la red por cable "
                         "manualmente. Si la consola exige gateway/DNS, consulte el manual; la prueba de "
                         "Internet no certifica el modo LAN.")
                 .arg(c.name, ipText(c.ip));
+        }
     }
     return text(
         "Seleccione una consola con reserva de sala. Las consolas recordadas reciben IP al crear o entrar "
@@ -1153,7 +1201,7 @@ void Window::updateView(QJsonObject nextView) {
                  : rtt < 0      ? "—"
                                 : QString::number(rtt) + " ms"));
     QString diag =
-        text("ConsoleLAN 1.2.2 · diagnóstico\n\nVPN / socket: %1\nNpcap: %2\nEstado: %3\nTráfico Ethernet "
+        text("ConsoleLAN 1.3.0 · diagnóstico\n\nVPN / socket: %1\nNpcap: %2\nEstado: %3\nTráfico Ethernet "
              "observado: %4\nInyecciones realizadas: %5\nErrores de envío: %6\nRechazos de protocolo: "
              "%7\nFiltradas: %8\nDescartes por cola: %9\n\nUn paquete observado no demuestra conectividad "
              "entre consolas.\nLa latencia mide ida y vuelta al maestro, no el ping del juego.\n\n")

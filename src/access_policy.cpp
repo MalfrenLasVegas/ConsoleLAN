@@ -91,4 +91,44 @@ AccessReply accessFromEthernet(const AccessPlan &p, const QString &adapter, cons
     }
     return {};
 }
+// Internet is a separate, local-only Ethernet path. Never accept a remote room
+// peer, an unlearned MAC, DHCP, or a packet addressed to the host's private LAN.
+bool internetInput(const AccessPlan &p, const QString &adapter, const QByteArray &b) {
+    const auto f = inspect(b);
+    if (!f || !std::any_of(p.targets.cbegin(), p.targets.cend(), [&](const auto &t) {
+            return t.adapter == adapter && t.ip == f->sourceIp && t.mac == f->source;
+        }))
+        return false;
+    if (f->arp)
+        return f->destIp == p.pcIp() && (f->group || f->destination == AccessMac);
+    if (f->destination != AccessMac || quint8(b[14]) != 0x45)
+        return false;
+    const auto proto = quint8(b[23]);
+    const auto dst = f->destIp;
+    if (dst == p.pcIp()) {
+        // Fragments to the host are excluded, so a non-DNS service cannot be
+        // smuggled into the DNS proxy via reassembly.
+        int h = (quint8(b[14]) & 15) * 4;
+        return !f->fragmentOffset && !f->moreFragments && (proto == 6 || proto == 17) &&
+               be16(b, 16) >= h + (proto == 6 ? 20 : 8) && be16(b, 16 + h) == 53;
+    }
+    if (proto != 1 && proto != 6 && proto != 17)
+        return false;
+    if ((dst >> 24) == 0 || (dst >> 24) == 10 || (dst >> 24) == 127 || (dst >> 22) == 0x191 ||
+        (dst >> 16) == 0xa9fe || (dst >> 20) == 0xac1 || (dst >> 16) == 0xc0a8 || (dst >> 24) >= 224 ||
+        ((dst >> 24) == 192 && ((dst >> 8) == 0xc00000 || (dst >> 8) == 0xc00002)) || (dst >> 17) == 0x6309 ||
+        (dst >> 8) == 0xc63364 || (dst >> 8) == 0xcb0071)
+        return false;
+    return true;
+}
+std::optional<AccessEthernet> internetOutput(const AccessPlan &p, const QByteArray &b) {
+    const auto f = inspect(b);
+    if (!f || f->source != AccessMac)
+        return {};
+    for (const auto &t : p.targets)
+        if (f->destIp == t.ip &&
+            (f->destination == t.mac || (f->arp && f->group && f->sourceIp == p.pcIp() && be16(b, 20) == 1)))
+            return AccessEthernet{t.adapter, b};
+    return {};
+}
 } // namespace cl

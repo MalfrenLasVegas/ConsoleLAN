@@ -20,6 +20,21 @@ if (Test-Path -LiteralPath $bundlePath) {
 }
 New-Item -ItemType Directory -Force -Path $bundlePath | Out-Null
 Copy-Item -LiteralPath (Join-Path $buildPath 'ConsoleLAN.exe'),(Join-Path $buildPath 'ConsoleLAN.Access.exe'),(Join-Path $buildPath 'wintun.dll') -Destination $bundlePath
+$internetManifest = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'internet-deps.json') -Raw | ConvertFrom-Json
+New-Item -ItemType Directory -Force -Path (Join-Path $bundlePath 'nat'),(Join-Path $bundlePath 'licenses\sources') | Out-Null
+foreach ($dependency in $internetManifest) {
+    $sourceFile = Join-Path $workspacePath ('deps\slirp\sources\' + $dependency.source)
+    if ((Get-FileHash -LiteralPath $sourceFile -Algorithm SHA256).Hash -ne $dependency.sourceSha256) { throw 'Fuentes de Internet inválidas.' }
+    Copy-Item -LiteralPath $sourceFile -Destination (Join-Path $bundlePath 'licenses\sources')
+    foreach ($dll in $dependency.files) {
+        $fileName = Split-Path -Leaf $dll
+        $originalDll = Join-Path $workspacePath ('deps\slirp\' + $dll)
+        if ((Get-FileHash -LiteralPath $originalDll -Algorithm SHA256).Hash -ne (Get-FileHash -LiteralPath (Join-Path $buildPath ('nat\' + $fileName)) -Algorithm SHA256).Hash) { throw "DLL Internet desactualizada: $fileName" }
+        Copy-Item -LiteralPath (Join-Path $buildPath ('nat\' + $fileName)) -Destination (Join-Path $bundlePath 'nat')
+    }
+}
+Copy-Item -LiteralPath (Join-Path $workspacePath 'deps\slirp\licenses') -Destination (Join-Path $bundlePath 'licenses\internet') -Recurse
+Copy-Item -LiteralPath (Join-Path $workspacePath 'deps\slirp\clang64\share\licenses') -Destination (Join-Path $bundlePath 'licenses\internet\msys2') -Recurse
 if ((Get-AuthenticodeSignature -LiteralPath (Join-Path $bundlePath 'wintun.dll')).Status -ne 'Valid') { throw 'Firma de Wintun inválida.' }
 & (Join-Path $QtRoot 'bin\windeployqt.exe') --release --no-compiler-runtime --no-translations --no-opengl-sw --skip-plugin-types 'iconengines,imageformats,tls,networkinformation' --dir $bundlePath (Join-Path $bundlePath 'ConsoleLAN.exe')
 if ($LASTEXITCODE -ne 0) { throw 'windeployqt falló.' }

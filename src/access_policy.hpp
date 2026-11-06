@@ -28,4 +28,6 @@ struct AccessReply {
     bool conflict = false;
 };
 AccessReply accessFromEthernet(const AccessPlan &, const QString &adapter, const QByteArray &frame);
+bool internetInput(const AccessPlan &, const QString &adapter, const QByteArray &frame);
+std::optional<AccessEthernet> internetOutput(const AccessPlan &, const QByteArray &frame);
 } // namespace cl

@@ -16,7 +16,7 @@ Estas dos láminas fueron aportadas para ilustrar el objetivo y la disposición 
 | --- | --- |
 | Consolas conectadas a una VPN | La VPN está en los PC Windows. Las consolas usan Ethernet con su switch local; el PC captura e inyecta mediante Npcap. |
 | PS4, PS5, Xbox, Switch y cualquier juego LAN | Son ejemplos de equipos. No se ha certificado compatibilidad con esas consolas ni con todos sus juegos; se requiere modo LAN adecuado y aceptación real. |
-| Gateway y DNS `10.50.0.254` | Son valores del dibujo, no servicios implementados. ConsoleLAN no ofrece gateway, DNS ni Internet. Siga la configuración del manual y la IP reservada que muestre la aplicación. |
+| Gateway y DNS `10.50.0.254` | Son valores del dibujo. Desde 1.3, la salida opcional a Internet ofrece gateway y DNS en la `.1` de la sala cuando está activa en el PC local. Siga la configuración del manual y la IP reservada que muestre la aplicación. |
 | Una interfaz oscura con menús laterales | Es una representación conceptual. La versión 1.1 ofrece temas claro/oscuro y usa Qt Widgets con pestañas para sala/consolas, diagnóstico y reservas del maestro. |
 | Maestro sobre varias salas | Cada sala tiene su propio anfitrión y relay. No hay un maestro global ni un servidor central. Un PC está en una sala a la vez. |
 | IP asignada automáticamente | El maestro reserva automáticamente una IP única. La dirección y máscara se configuran manualmente en la consola. |

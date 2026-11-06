@@ -1,10 +1,18 @@
-# ConsoleLAN 1.2.2
+# ConsoleLAN 1.3.0
 
 [Español](README.md) · English
 
 Windows x64 application in C++20, Qt 6 Widgets, Winsock and Npcap for selectively extending console LAN traffic over an existing VPN. Each room's host coordinates IP reservations and relays UDP traffic. No accounts or central server are required.
 
-## TCP and FTP in 1.2.2
+## Optional Internet access in 1.3.0
+
+Enable **Local access**, then **Internet for your consoles**. The app shows the room subnet’s `.1` as gateway and DNS for this PC’s consoles. Enter both manually on the console; keep its reserved IP and mask. Each site uses its own PC’s Internet connection without changing Ethernet, router or VPN settings. Disabled by default. [Setup, limits and validation](docs/INFORME-1.3.0.md).
+
+No ICS, WinNAT or inbound port mappings are installed. NAT type 2, UPnP and universal PSN compatibility are not guaranteed. Keep the PC on and connected.
+
+![Optional Internet: enabled gateway and DNS (example data)](docs/images/consolelan-1.3-internet-light-en.png)
+
+## TCP and FTP
 
 Optional local PC access supports any TCP port on registered local consoles, without an FTP-only port allowlist. A scoped, temporary WFP guard prevents Windows forwarding from looping Ethernet-injected packets back into Wintun. Existing Ethernet/VPN forwarding settings are not changed.
 
@@ -17,19 +25,19 @@ Ignore frames emitted or forwarded by the PC Ethernet adapter before console ide
 ## New in 1.2
 
 - **Optional access from this PC to its local consoles**, using a dedicated signed Wintun adapter for FTP or other services while LAN gaming continues.
-- Only host routes to this PC's consoles. Existing Ethernet/VPN settings, DHCP, DNS and gateways remain unchanged. No NAT or access to consoles in other homes through this feature.
+- Only host routes to this PC's consoles. Existing Ethernet/VPN settings, DHCP, DNS and gateways remain unchanged. No default route is installed on the PC, and this feature cannot access consoles in other homes. Console Internet access has a separate optional switch.
 - A separate elevated helper owns and removes the adapter and routes. The main app can remain unprivileged. Cancelling permission leaves access disabled.
 - Cleanup on disable, room exit, app closure, lost control channel, missing heartbeats or parent-process death.
 - Guided UI with clearer text, separate IP fields, copy feedback, Light/Dark themes and English/Spanish.
 
 ## Downloads
 
-- [Windows x64 installer](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.2.2/ConsoleLAN-1.2.2-win64-setup.exe)
-- [Portable package with Qt](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.2.2/ConsoleLAN-1.2.2-win64-portable.zip)
-- [Full source and illustrated documentation](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.2.2/ConsoleLAN-1.2.2-source.zip)
-- [SHA256 checksums](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.2.2/SHA256SUMS.txt)
+- [Windows x64 installer](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.3.0/ConsoleLAN-1.3.0-win64-setup.exe)
+- [Portable package with Qt](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.3.0/ConsoleLAN-1.3.0-win64-portable.zip)
+- [Full source and illustrated documentation](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.3.0/ConsoleLAN-1.3.0-source.zip)
+- [SHA256 checksums](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.3.0/SHA256SUMS.txt)
 
-Read the [1.2.2 release notes](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/tag/v1.2.2). [Npcap](https://npcap.com/#download) must be installed separately. The portable package requires an up-to-date Microsoft Visual C++ Runtime x64. Qt Base sources and license notices are included in the binary packages.
+Read the [1.3.0 release notes](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/tag/v1.3.0). [Npcap](https://npcap.com/#download) must be installed separately. The portable package requires an up-to-date Microsoft Visual C++ Runtime x64. Qt Base sources and license notices are included in the binary packages.
 
 ## Interface
 
@@ -47,7 +55,7 @@ Real UI rendered with synthetic data. These screenshots do not prove console gam
 4. Add consoles and manually configure the IP/mask reserved by the host. MAC learning uses IPv4 source or ARP sender-IP, never an ARP question about a reservation.
 5. Use the game's LAN/System Link mode and complete the [hardware acceptance checklist](docs/ACEPTACION.md).
 
-**Actual console gameplay still requires hardware acceptance.** Promiscuous mode alone does not guarantee that a switch delivers relevant unicast traffic to the bridge PC. Console/game/firmware compatibility depends on its LAN mode. There is no Internet access, DNS, gateway, NAT, PSN integration or automatic host migration. Only one bridge PC per physical LAN is supported.
+**Actual console gameplay still requires hardware acceptance.** Promiscuous mode alone does not guarantee that a switch delivers relevant unicast traffic to the bridge PC. Console/game/firmware compatibility depends on its LAN mode. Internet, gateway and DNS require the optional local Internet switch. There is no PSN integration, UPnP, inbound port forwarding or automatic host migration. Only one bridge PC per physical LAN is supported.
 
 The tunnel validates room/session/endpoint and registered MAC/IP ownership. It transports Ethernet without VLAN, ARP and IPv4 up to 1514 bytes, blocks DHCP and excludes other EtherTypes. Known local unicast stays on the physical switch. Rooms rely on a trusted VPN for access security and encryption; a room ID is not user authentication.
 
@@ -56,6 +64,7 @@ The tunnel validates room/session/endpoint and registered MAC/IP ownership. It t
 Install Visual Studio C++ x64 Build Tools, CMake, Ninja and Qt with Core, Widgets and Test. The verified packaging configuration uses Qt 6.12.0 msvc2022_64.
 
 ```powershell
+python -m pip install zstandard==0.25.0
 $env:Qt6_ROOT = 'D:\Qt\6.12.0\msvc2022_64'
 .\scripts\fetch-deps.ps1 -Packaging
 .\scripts\build.cmd

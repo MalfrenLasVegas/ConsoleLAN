@@ -170,6 +170,43 @@ class UiTests : public QObject {
         QVERIFY(window.findChild<QLabel *>("nextStep")->text().startsWith("Wait for"));
         QVERIFY(window.findChild<QLabel *>("consoleConfigurationHelp")->text().startsWith("Waiting for"));
     }
+    void internetPresentation() {
+        Window window(preferences_.path(), false);
+        auto toggle = window.findChild<QPushButton *>("internetToggle");
+        auto gateway = window.findChild<QLabel *>("consoleGateway");
+        auto dns = window.findChild<QLabel *>("consoleDns");
+        QVERIFY(toggle && gateway && dns && !toggle->isEnabled());
+        auto view = fixture();
+        view["localAccess"] = QJsonObject{
+            {"state", "active"}, {"requested", true}, {"internetCapable", true}, {"pcIp", "10.253.42.1"}};
+        QVERIFY(
+            QMetaObject::invokeMethod(&window, "updateView", Qt::DirectConnection, Q_ARG(QJsonObject, view)));
+        window.findChild<QTableWidget *>("consolesTable")->selectRow(0);
+        QVERIFY(toggle->isEnabled());
+        QCOMPARE(gateway->text(), QString("Vacía o 0.0.0.0"));
+        auto access = view["localAccess"].toObject();
+        access["internetRequested"] = true;
+        access["internetActive"] = true;
+        view["localAccess"] = access;
+        QVERIFY(
+            QMetaObject::invokeMethod(&window, "updateView", Qt::DirectConnection, Q_ARG(QJsonObject, view)));
+        QCOMPARE(toggle->text(), QString("Desactivar Internet"));
+        QCOMPARE(gateway->text(), QString("10.253.42.1"));
+        QCOMPARE(dns->text(), QString("10.253.42.1"));
+        QString configuration;
+        QVERIFY(QMetaObject::invokeMethod(&window, "configuration", Qt::DirectConnection,
+                                          Q_RETURN_ARG(QString, configuration)));
+        QVERIFY(configuration.contains("DNS primario: 10.253.42.1"));
+        presentation().setLanguage("en");
+        QTRY_COMPARE(toggle->text(), QString("Disable Internet"));
+        QVERIFY(window.findChild<QLabel *>("internetStatus")->text().startsWith("Gateway and DNS enabled"));
+        access["internetActive"] = false;
+        access["internetRequested"] = false;
+        view["localAccess"] = access;
+        QVERIFY(
+            QMetaObject::invokeMethod(&window, "updateView", Qt::DirectConnection, Q_ARG(QJsonObject, view)));
+        QCOMPARE(dns->text(), QString("Not set"));
+    }
     void localAccessPresentation() {
         Window window(preferences_.path(), false);
         auto toggle = window.findChild<QPushButton *>("localAccessToggle");
@@ -309,6 +346,16 @@ class UiTests : public QObject {
         QTest::qWait(100);
         scroll->verticalScrollBar()->setValue(scroll->verticalScrollBar()->maximum());
         QVERIFY(window.grab().save("preview-local-access-dark-es.png"));
+        auto internetAccess = accessView["localAccess"].toObject();
+        internetAccess["internetCapable"] = true;
+        internetAccess["internetRequested"] = true;
+        internetAccess["internetActive"] = true;
+        accessView["localAccess"] = internetAccess;
+        QVERIFY(QMetaObject::invokeMethod(&window, "updateView", Qt::DirectConnection,
+                                          Q_ARG(QJsonObject, accessView)));
+        QTest::qWait(100);
+        scroll->verticalScrollBar()->setValue(scroll->verticalScrollBar()->maximum());
+        QVERIFY(window.grab().save("preview-internet-dark-es.png"));
         auto details = window.findChild<QFrame *>("consoleDetails");
         QVERIFY(details->isVisible());
         QVERIFY(window.findChild<QLabel *>("consoleIpAddress")->text() == "10.253.42.2");
@@ -322,6 +369,8 @@ class UiTests : public QObject {
         vpn->clear();
         vpn->addItem("Example VPN · 10.147.0.2", "example|10.147.0.2");
         QVERIFY(window.grab().save("preview-session-light-en.png"));
+        scroll->verticalScrollBar()->setValue(scroll->verticalScrollBar()->maximum());
+        QVERIFY(window.grab().save("preview-internet-light-en.png"));
         language->setCurrentIndex(language->findData("es"));
         theme->setCurrentIndex(theme->findData("dark"));
         QTest::qWait(100);
