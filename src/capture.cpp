@@ -23,6 +23,10 @@ struct Api {
     decltype(&pcap_geterr) geterr = nullptr;
     decltype(&pcap_lib_version) version = nullptr;
     decltype(&pcap_getevent) event = nullptr;
+    decltype(&pcap_sendqueue_alloc) queueAlloc = nullptr;
+    decltype(&pcap_sendqueue_queue) queueAdd = nullptr;
+    decltype(&pcap_sendqueue_transmit) queueSend = nullptr;
+    decltype(&pcap_sendqueue_destroy) queueDestroy = nullptr;
     Api() {
         wchar_t dir[MAX_PATH];
         GetSystemDirectoryW(dir, MAX_PATH);
@@ -46,11 +50,19 @@ struct Api {
         LOAD(promisc, pcap_set_promisc)
         LOAD(timeout, pcap_set_timeout)
         LOAD(immediate, pcap_set_immediate_mode)
-        LOAD(nonblock, pcap_setnonblock) LOAD(next, pcap_next_ex) LOAD(send, pcap_sendpacket)
-            LOAD(close, pcap_close) LOAD(datalink, pcap_datalink) LOAD(compile, pcap_compile)
-                LOAD(filter, pcap_setfilter) LOAD(freecode, pcap_freecode) LOAD(geterr, pcap_geterr)
-                    LOAD(version, pcap_lib_version) LOAD(event, pcap_getevent)
+        LOAD(nonblock, pcap_setnonblock)
+        LOAD(next, pcap_next_ex) LOAD(send, pcap_sendpacket) LOAD(close, pcap_close)
+            LOAD(datalink, pcap_datalink) LOAD(compile, pcap_compile) LOAD(filter, pcap_setfilter)
+                LOAD(freecode, pcap_freecode) LOAD(geterr, pcap_geterr) LOAD(version, pcap_lib_version)
+                    LOAD(event, pcap_getevent)
 #undef LOAD
+            // Optional exports: older/incomplete Npcap installations retain the
+            // existing individual-send path. Room injection never uses these.
+            queueAlloc = reinterpret_cast<decltype(queueAlloc)>(GetProcAddress(dll, "pcap_sendqueue_alloc"));
+        queueAdd = reinterpret_cast<decltype(queueAdd)>(GetProcAddress(dll, "pcap_sendqueue_queue"));
+        queueSend = reinterpret_cast<decltype(queueSend)>(GetProcAddress(dll, "pcap_sendqueue_transmit"));
+        queueDestroy =
+            reinterpret_cast<decltype(queueDestroy)>(GetProcAddress(dll, "pcap_sendqueue_destroy"));
     }
     ~Api() {
         if (dll)
@@ -63,7 +75,11 @@ static Api &api() {
 }
 struct Capture::Impl {
     pcap_t *p = nullptr;
+    pcap_send_queue *localQueue = nullptr;
+    bool queueUnavailable = false;
     ~Impl() {
+        if (localQueue)
+            api().queueDestroy(localQueue);
         if (p)
             api().close(p);
     }
@@ -142,6 +158,52 @@ bool Capture::inject(const QByteArray &b) {
         return false;
     }
     return true;
+}
+bool Capture::injectLocalBatch(std::span<const QByteArray> frames) {
+    if (frames.size() > LocalBatchPackets || std::any_of(frames.begin(), frames.end(), [](const auto &b) {
+            return b.size() < 14 || b.size() > 1514;
+        })) {
+        error = "Lote de acceso local inválido";
+        return false;
+    }
+    auto &a = api();
+    return dispatchLocalBatch(
+        frames,
+        [&] {
+            auto &p = *impl_;
+            if (p.queueUnavailable || !a.queueAlloc || !a.queueAdd || !a.queueSend || !a.queueDestroy)
+                return BatchSendResult::Unavailable;
+            if (!p.localQueue) {
+                p.localQueue = a.queueAlloc(LocalBatchPackets * (sizeof(pcap_pkthdr) + 1514));
+                if (!p.localQueue) {
+                    p.queueUnavailable = true;
+                    return BatchSendResult::Unavailable;
+                }
+            }
+            auto q = p.localQueue;
+            q->len = 0;
+            for (const auto &b : frames) {
+                pcap_pkthdr h{};
+                h.caplen = h.len = u_int(b.size());
+                if (a.queueAdd(q, &h, reinterpret_cast<const u_char *>(b.constData())) != 0) {
+                    q->len = 0;
+                    error = "No se pudo preparar el lote del acceso local";
+                    return BatchSendResult::Failed;
+                }
+            }
+            const auto expected = q->len;
+            const auto written = a.queueSend(p.p, q, 0);
+            q->len = 0;
+            if (written != expected) {
+                error = QString("Envío incompleto del acceso local (%1 de %2 bytes): %3")
+                            .arg(written)
+                            .arg(expected)
+                            .arg(QString::fromLocal8Bit(a.geterr(p.p)));
+                return BatchSendResult::Failed;
+            }
+            return BatchSendResult::Sent;
+        },
+        [&](const QByteArray &b) { return inject(b); });
 }
 QByteArray bridgeBeacon(Id n) {
     QByteArray b = QByteArray::fromHex("ffffffffffff0200434c414e88b5");

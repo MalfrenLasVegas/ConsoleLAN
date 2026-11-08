@@ -1,4 +1,4 @@
-#define AppVersion "1.3.1"
+#define AppVersion "1.3.2"
 [Setup]
 AppId={{4A5734ED-D8AD-42AB-A730-B639CC1D6804}
 AppName=ConsoleLAN
@@ -7,7 +7,7 @@ AppPublisher=ConsoleLAN
 DefaultDirName={autopf}\ConsoleLAN
 DefaultGroupName=ConsoleLAN
 OutputDir=..\dist
-OutputBaseFilename=ConsoleLAN-1.3.1-win64-setup
+OutputBaseFilename=ConsoleLAN-1.3.2-win64-setup
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0.19041
@@ -57,7 +57,7 @@ Name: "firewall"; Description: "{cm:FirewallTask}"; Flags: unchecked; Check: IsA
 Name: "desktopicon"; Description: "{cm:DesktopIcon}"; Flags: unchecked
 
 [Files]
-Source: "..\dist\ConsoleLAN-1.3.1-win64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\dist\ConsoleLAN-1.3.2-win64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\deps\vc_redist.x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall; Check: NeedRuntime
 
 [Icons]

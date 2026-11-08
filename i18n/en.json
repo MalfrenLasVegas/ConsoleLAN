@@ -359,5 +359,8 @@
   "ConsoleLAN 1.3.1 · diagnóstico\n\nVPN / socket: %1\nNpcap: %2\nEstado: %3\nTráfico Ethernet observado: %4\nInyecciones realizadas: %5\nErrores de envío: %6\nRechazos de protocolo: %7\nFiltradas: %8\nDescartes por cola: %9\n\nUn paquete observado no demuestra conectividad entre consolas.\nLa latencia mide ida y vuelta al maestro, no el ping del juego.\n\n": "ConsoleLAN 1.3.1 · diagnostics\n\nVPN / socket: %1\nNpcap: %2\nStatus: %3\nObserved Ethernet packets: %4\nFrames injected: %5\nSend errors: %6\nProtocol rejections: %7\nFiltered frames: %8\nQueue drops: %9\n\nAn observed packet does not prove connectivity between consoles.\nLatency measures the round trip to the host, not in-game ping.\n\n",
   "ConsoleLAN 1.3.1 iniciado. %1": "ConsoleLAN 1.3.1 started. %1",
   "Npcap no ofrece un evento de lectura para el acceso local.": "Npcap does not provide a local-access read event.",
-  "No se pudo esperar al tráfico del acceso local (Windows %1).": "Could not wait for local-access traffic (Windows %1)."
+  "No se pudo esperar al tráfico del acceso local (Windows %1).": "Could not wait for local-access traffic (Windows %1).",
+  "Lote de acceso local inválido": "Invalid local access batch",
+  "No se pudo preparar el lote del acceso local": "Could not prepare the local access batch",
+  "Envío incompleto del acceso local (%1 de %2 bytes): %3": "Incomplete local access send (%1 of %2 bytes): %3"
 }

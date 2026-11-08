@@ -1,5 +1,6 @@
 #pragma once
 #include "common.hpp"
+#include "capture_batch.hpp"
 namespace cl {
 class Capture {
     struct Impl;
@@ -12,6 +13,8 @@ class Capture {
     bool open(QString adapter, const QString &filter = {});
     std::optional<QByteArray> receive();
     bool inject(const QByteArray &b);
+    // Opt-in: used only by the PC-to-local-console access helper.
+    bool injectLocalBatch(std::span<const QByteArray> frames);
     void *readEvent() const;
     static QString version();
 };

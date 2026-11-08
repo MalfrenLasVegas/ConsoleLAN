@@ -1,4 +1,4 @@
-# ConsoleLAN 1.3.1
+# ConsoleLAN 1.3.2
 
 Español · [English](README.en.md)
 
@@ -6,20 +6,20 @@ Aplicación Windows x64 en C++20, Qt 6 Widgets, Winsock y Npcap para extender tr
 
 **Estado de la versión:** 54 comprobaciones del núcleo y pruebas Winsock con tres sockets reales superadas. La compatibilidad con consolas, switches y juegos requiere la [aceptación con hardware](docs/ACEPTACION.md); se han comunicado partidas reales satisfactorias, sin certificar compatibilidad universal.
 
-## Descargar ConsoleLAN 1.3.1
+## Descargar ConsoleLAN 1.3.2
 
-- [Instalador para Windows x64](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.3.1/ConsoleLAN-1.3.1-win64-setup.exe)
-- [Versión portátil con Qt](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.3.1/ConsoleLAN-1.3.1-win64-portable.zip)
-- [Código fuente y documentación ilustrada](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.3.1/ConsoleLAN-1.3.1-source.zip)
-- [Sumas SHA256](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.3.1/SHA256SUMS.txt)
+- [Instalador para Windows x64](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.3.2/ConsoleLAN-1.3.2-win64-setup.exe)
+- [Versión portátil con Qt](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.3.2/ConsoleLAN-1.3.2-win64-portable.zip)
+- [Código fuente y documentación ilustrada](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.3.2/ConsoleLAN-1.3.2-source.zip)
+- [Sumas SHA256](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/download/v1.3.2/SHA256SUMS.txt)
 
-Consulte las [notas de la Release 1.3.1](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/tag/v1.3.1) antes de instalar. Npcap se instala por separado y la versión portátil requiere Microsoft Visual C++ Runtime x64 actualizado.
+Consulte las [notas de la Release 1.3.2](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/tag/v1.3.2) antes de instalar. Npcap se instala por separado y la versión portátil requiere Microsoft Visual C++ Runtime x64 actualizado.
 
-## Rendimiento local en 1.3.1
+## Rendimiento local en 1.3.2
 
-El acceso entre el PC y sus consolas locales usa eventos de Wintun/Npcap y continúa vaciando las colas mientras hay tráfico, sin la pausa fija tras cada lote. El auxiliar también evita recapturar sus propias inyecciones. Se conservan la sala LAN, la VPN, FTP, Internet, las reservas y sus políticas. [Cambios, comparación y límites](docs/INFORME-1.3.1.md).
+«Acceso desde este PC» envía por lotes nativos de Npcap únicamente el tráfico del PC a sus consolas locales, incluidas las confirmaciones TCP. Los turnos de hasta 64 paquetes atienden ambos sentidos sin esperar a llenar un lote. La sala y la VPN conservan su transporte actual; Ethernet, reservas e Internet opcional mantienen su configuración.
 
-La comparación automatizada usa TCP real de Windows y una consola Ethernet simulada. La velocidad con PS4/PS5 físicas debe medirse después de instalar; no se promete gigabit a partir del resultado sintético.
+Las pruebas del prototipo con una PS5 física dieron aproximadamente 19 MB/s de subida individual frente a 59–67 MB/s por lotes, con archivos de prueba y verificación SHA-256. Son mediciones de ese equipo, no una garantía para juegos o clientes distintos. [Implementación, pruebas y límites](docs/INFORME-1.3.2.md).
 
 ## Internet opcional en 1.3.0
 
@@ -64,7 +64,7 @@ Las siguientes imágenes son **ilustraciones conceptuales aportadas para la docu
 ## Empezar
 
 1. Instalar Npcap desde [su página oficial](https://npcap.com/#download) en cada PC. No se incluye en esta distribución.
-2. Descargar el [instalador o el ZIP portátil de la Release 1.3.1](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/tag/v1.3.1). Instalar `ConsoleLAN-1.3.1-win64-setup.exe`, o descomprimir el ZIP portátil y abrir `ConsoleLAN.exe`. La versión portátil requiere Microsoft Visual C++ Runtime x64 actualizado. Al obtener únicamente el código de este repositorio, siga las instrucciones de compilación de abajo para generar `dist/`.
+2. Descargar el [instalador o el ZIP portátil de la Release 1.3.2](https://github.com/MalfrenLasVegas/ConsoleLAN/releases/tag/v1.3.2). Instalar `ConsoleLAN-1.3.2-win64-setup.exe`, o descomprimir el ZIP portátil y abrir `ConsoleLAN.exe`. La versión portátil requiere Microsoft Visual C++ Runtime x64 actualizado. Al obtener únicamente el código de este repositorio, siga las instrucciones de compilación de abajo para generar `dist/`.
 3. Elegir la VPN correcta y la Ethernet de las consolas. Crear una sala en un PC y entrar desde los demás mediante la IPv4 VPN del anfitrión.
 4. Añadir las consolas, aplicar las IP reservadas y seguir [el manual](docs/MANUAL.md).
 5. Completar [la aceptación con dos PC](docs/ACEPTACION.md) antes de dar por verificada una partida LAN.

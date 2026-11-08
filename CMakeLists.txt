@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-project(ConsoleLAN VERSION 1.3.1 LANGUAGES CXX)
+project(ConsoleLAN VERSION 1.3.2 LANGUAGES CXX)
 # CMake can misdecode the UTF-8 /showIncludes prefix with Spanish-only MSVC.
 # Keep Ninja's dependency parser consistent with the compiler's actual bytes.
 if(MSVC AND CMAKE_CXX_CL_SHOWINCLUDES_PREFIX MATCHES "^Nota:")
@@ -72,6 +72,9 @@ add_test(NAME core COMMAND core_tests)
 add_executable(access_tests tests/access_tests.cpp)
 target_link_libraries(access_tests PRIVATE consolelan_core)
 add_test(NAME local_access_policy COMMAND access_tests)
+add_executable(capture_batch_tests tests/capture_batch_tests.cpp)
+target_link_libraries(capture_batch_tests PRIVATE consolelan_core)
+add_test(NAME local_batch_dispatch COMMAND capture_batch_tests)
 if(WIN32)
   add_test(NAME winsock_loopback COMMAND network_tests)
   add_test(NAME local_access_native COMMAND access_native_tests)

@@ -1,0 +1,20 @@
+{
+  "mode": "production-local-64",
+  "bytesEachDirection": 536870912,
+  "uploadMBps": 64.13656703954462,
+  "downloadMBps": 114.24473266858833,
+  "sha256": "886aaea67d658b78fde8dea46d7c7bfb3bd75485af1d2f1a6f307fa4d34c72c9",
+  "binaryExact": true,
+  "temporaryFileDeleted": true,
+  "injectionCalls": 13309,
+  "injectedPackets": 554089,
+  "injectionSeconds": 8.3831523,
+  "captureDropsCumulative": 0,
+  "interfaceDropsCumulative": 0,
+  "date": "2026-11-08",
+  "physicalConsole": true,
+  "transport": "Windows TCP / Wintun / production Capture::injectLocalBatch / Npcap / physical Ethernet / PS5 FTP",
+  "testAdapterRemoved": true,
+  "existingAddressesPreserved": true,
+  "hardwareGameplayTested": false
+}

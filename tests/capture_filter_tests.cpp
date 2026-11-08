@@ -32,6 +32,52 @@ int main(int argc, char **argv) {
     auto close = reinterpret_cast<decltype(&pcap_close)>(GetProcAddress(dll, "pcap_close"));
     try {
         check(open && compile && filter && freecode && close, "real Npcap BPF API available");
+        auto allocateQueue =
+            reinterpret_cast<decltype(&pcap_sendqueue_alloc)>(GetProcAddress(dll, "pcap_sendqueue_alloc"));
+        auto enqueue =
+            reinterpret_cast<decltype(&pcap_sendqueue_queue)>(GetProcAddress(dll, "pcap_sendqueue_queue"));
+        auto destroyQueue = reinterpret_cast<decltype(&pcap_sendqueue_destroy)>(
+            GetProcAddress(dll, "pcap_sendqueue_destroy"));
+        check(allocateQueue && enqueue && destroyQueue, "real native send queue API available");
+        auto queue = allocateQueue(4096);
+        check(queue && queue->len == 0, "native queue starts empty");
+        auto freeQueue = qScopeGuard([&] { destroyQueue(queue); });
+        const std::array<QByteArray, 2> queuedFrames{QByteArray(60, '\x31'), QByteArray(1514, '\xa6')};
+        for (const auto &frame : queuedFrames) {
+            pcap_pkthdr h{};
+            h.caplen = h.len = u_int(frame.size());
+            check(enqueue(queue, &h, reinterpret_cast<const u_char *>(frame.constData())) == 0,
+                  "native queue accepts complete Ethernet frame");
+        }
+        u_int offset = 0;
+        for (const auto &frame : queuedFrames) {
+            pcap_pkthdr h{};
+            memcpy(&h, queue->buffer + offset, sizeof(h));
+            offset += sizeof(h);
+            check(h.caplen == frame.size() && h.len == frame.size(), "native queue preserves frame lengths");
+            check(QByteArray(queue->buffer + offset, h.caplen) == frame,
+                  "native queue preserves binary bytes and ordering");
+            offset += h.caplen;
+        }
+        check(offset == queue->len, "native queue length covers exact headers and payloads");
+        queue->len = 0;
+        check(queue->len == 0, "native queue is reusable without stale frames");
+        auto small = allocateQueue(64);
+        check(small, "bounded queue allocation");
+        auto freeSmall = qScopeGuard([&] { destroyQueue(small); });
+        pcap_pkthdr largeHeader{};
+        largeHeader.caplen = largeHeader.len = 60;
+        check(enqueue(small, &largeHeader, reinterpret_cast<const u_char *>(queuedFrames[0].constData())) !=
+                      0 &&
+                  small->len == 0,
+              "capacity failure leaves queued content unchanged");
+        Capture unopened;
+        check(unopened.injectLocalBatch({}), "empty local batch does not require an adapter");
+        const std::array<QByteArray, 1> shortFrame{QByteArray(13, 0)}, oversizedFrame{QByteArray(1515, 0)};
+        check(!unopened.injectLocalBatch(shortFrame) && !unopened.injectLocalBatch(oversizedFrame),
+              "invalid frames are rejected before driver access");
+        const std::array<QByteArray, LocalBatchPackets + 1> tooMany{};
+        check(!unopened.injectLocalBatch(tooMany), "oversized burst is rejected before driver access");
         auto p = open(DLT_EN10MB, 1600);
         check(p, "offline Ethernet capture");
         auto cleanup = qScopeGuard([&] { close(p); });

@@ -140,7 +140,8 @@ bool AccessAdapter::open(const AccessPlan &p, QString name) {
     WLOAD(receive, WintunReceivePacket)
     WLOAD(release, WintunReleaseReceivePacket)
     WLOAD(allocate, WintunAllocateSendPacket)
-    WLOAD(send, WintunSendPacket) WLOAD(readEvent, WintunGetReadWaitEvent)
+    WLOAD(send, WintunSendPacket)
+    WLOAD(readEvent, WintunGetReadWaitEvent)
 #undef WLOAD
         // Stable identity; never open, reconfigure or remove somebody else's adapter.
         GUID guid{0x3c25397a, 0x0c31, 0x4b99, {0xbf, 0x36, 0x43, 0xf5, 0x37, 0xc5, 0xb0, 0x55}};
@@ -389,21 +390,28 @@ int accessHelperMain(const QString &pipeName, quint32 parentPid) {
             break;
         bool saturated = false;
         if (current) {
-            auto outgoing = drainAccessPackets([&] { return tun.receive(); },
-                                               [&](const QByteArray &ip) {
-                                                   auto frame = accessToEthernet(*current, ip);
-                                                   if (frame && captures.contains(frame->adapter)) {
-                                                       if (captures.at(frame->adapter)->inject(frame->bytes))
-                                                           ++sent;
-                                                       else {
-                                                           error = captures.at(frame->adapter)->error;
-                                                           return false;
-                                                       }
-                                                   } else
-                                                       ++filtered;
-                                                   return true;
-                                               });
+            std::map<QString, QList<QByteArray>> localBatches;
+            auto outgoing =
+                drainAccessPackets([&] { return tun.receive(); },
+                                   [&](const QByteArray &ip) {
+                                       auto frame = accessToEthernet(*current, ip);
+                                       if (frame && captures.contains(frame->adapter)) {
+                                           localBatches[frame->adapter].append(std::move(frame->bytes));
+                                       } else
+                                           ++filtered;
+                                       return true;
+                                   },
+                                   LocalBatchPackets);
             saturated = outgoing.saturated;
+            for (const auto &[id, frames] : localBatches) {
+                if (!captures.at(id)->injectLocalBatch({frames.constData(), size_t(frames.size())})) {
+                    error = captures.at(id)->error;
+                    break;
+                }
+                sent += frames.size();
+            }
+            if (!error.isEmpty())
+                break;
             for (auto &[id, cap] : captures) {
                 auto incoming = drainAccessPackets(
                     [&] { return cap->receive(); },
@@ -420,7 +428,8 @@ int accessHelperMain(const QString &pipeName, quint32 parentPid) {
                         if (!reply.ip.isEmpty() && tun.send(reply.ip))
                             ++received;
                         return error.isEmpty();
-                    });
+                    },
+                    LocalBatchPackets);
                 saturated = saturated || incoming.saturated;
                 if (!cap->error.isEmpty())
                     error = cap->error;
